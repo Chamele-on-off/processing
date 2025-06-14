@@ -150,6 +150,75 @@
             background-color: #f8f9fa;
             font-weight: 600;
         }
+
+        /* Стили для консоли логов */
+        #log-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            border-top: 1px solid #444;
+        }
+
+        #log-console .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        #log-console .log-time {
+            color: #6a9955;
+        }
+
+        #log-console .log-method {
+            color: #569cd6;
+        }
+
+        #log-console .log-url {
+            color: #9cdcfe;
+        }
+
+        #log-console .log-status {
+            color: #b5cea8;
+        }
+
+        #log-console .log-error {
+            color: #f48771;
+        }
+
+        #log-console .log-success {
+            color: #4ec9b0;
+        }
+
+        #log-console .log-info {
+            color: #c586c0;
+        }
+
+        #log-toggle {
+            position: fixed;
+            bottom: 210px;
+            right: 20px;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #1e1e1e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -213,6 +282,7 @@
                 </div>
             </nav>
 
+            {% block content %}
             <!-- Dashboard Section -->
             <div id="dashboard-section" class="container-fluid px-4 py-4 page-section active">
                 <h1 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i>Дашборд</h1>
@@ -223,9 +293,9 @@
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#depositsModal">
                             <i class="fas fa-money-bill-wave me-2"></i>Подтвердить депозиты
                         </button>
-                        <a href="/admin/platform-balance" class="btn btn-info">
+                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#platformBalanceModal">
                             <i class="fas fa-wallet me-2"></i>Баланс платформы
-                        </a>
+                        </button>
                         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#matchingModal">
                             <i class="fas fa-random me-2"></i>Матчинг транзакций
                         </button>
@@ -539,12 +609,9 @@
                                                     <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
                                                     <td>{{ tx.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
                                                     <td>
-                                                        <form action="/api/transactions/{{ tx.id }}/complete" method="POST" class="d-inline">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Подтвердить транзакцию #{{ tx.id }}?')">
-                                                                <i class="fas fa-check"></i> Подтвердить
-                                                            </button>
-                                                        </form>
+                                                        <button class="btn btn-sm btn-success complete-tx" data-tx-id="{{ tx.id }}">
+                                                            <i class="fas fa-check"></i> Подтвердить
+                                                        </button>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -592,6 +659,7 @@
                     </div>
                 </div>
             </div>
+            {% endblock %}
         </div>
     </div>
 
@@ -660,35 +728,89 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for deposit in pending_deposits %}
-                                <tr>
-                                    <td>{{ deposit.id }}</td>
-                                    <td>{{ deposit.user_email }}</td>
-                                    <td>{{ "%.2f"|format(deposit.amount) }} ₽</td>
-                                    <td>{{ deposit.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
-                                    <td>
-                                        <form method="POST" action="/admin/deposits/{{ deposit.id }}/complete" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Подтвердить депозит #{{ deposit.id }}?')">
-                                                <i class="fas fa-check"></i> Подтвердить
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="/admin/deposits/{{ deposit.id }}/reject" class="d-inline ms-1">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Отклонить депозит #{{ deposit.id }}?')">
-                                                <i class="fas fa-times"></i> Отклонить
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center">Нет ожидающих депозитов</td>
-                                </tr>
-                                {% endfor %}
+                            <tbody id="pendingDepositsTable">
+                                <!-- Will be populated by JavaScript -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Balance Modal -->
+    <div class="modal fade" id="platformBalanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-wallet me-2"></i>Баланс платформы</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">Общий баланс</h6>
+                                    <h3 id="totalBalance">0.00 ₽</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <h6 class="card-title text-success">Доступно для выплат</h6>
+                                    <h3 id="availableBalance">0.00 ₽</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold">Распределение средств</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Тип</th>
+                                            <th>Сумма</th>
+                                            <th>Процент</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="balanceDistribution">
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold">Балансы пользователей</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Пользователь</th>
+                                            <th>Роль</th>
+                                            <th>Баланс</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersBalances">
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -723,18 +845,8 @@
                                                     <th>Мерчант</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
-                                                {% for deposit in pending_deposits %}
-                                                <tr>
-                                                    <td>{{ deposit.id }}</td>
-                                                    <td>{{ "%.2f"|format(deposit.amount) }} ₽</td>
-                                                    <td>{{ deposit.user_email }}</td>
-                                                </tr>
-                                                {% else %}
-                                                <tr>
-                                                    <td colspan="3" class="text-center">Нет ожидающих депозитов</td>
-                                                </tr>
-                                                {% endfor %}
+                                            <tbody id="pendingDepositsList">
+                                                <!-- Will be populated by JavaScript -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -756,18 +868,8 @@
                                                     <th>Мерчант</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
-                                                {% for withdrawal in pending_withdrawals %}
-                                                <tr>
-                                                    <td>{{ withdrawal.id }}</td>
-                                                    <td>{{ "%.2f"|format(withdrawal.amount) }} ₽</td>
-                                                    <td>{{ withdrawal.user_email }}</td>
-                                                </tr>
-                                                {% else %}
-                                                <tr>
-                                                    <td colspan="3" class="text-center">Нет ожидающих выводов</td>
-                                                </tr>
-                                                {% endfor %}
+                                            <tbody id="pendingWithdrawalsList">
+                                                <!-- Will be populated by JavaScript -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -779,12 +881,9 @@
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold">Найденные совпадения</h6>
-                            <form method="POST" action="/api/admin/matching/run" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-sync me-1"></i>Запустить матчинг
-                                </button>
-                            </form>
+                            <button id="runMatchingBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-sync me-1"></i>Запустить матчинг
+                            </button>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -799,28 +898,8 @@
                                             <th>Действия</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {% for match in matches %}
-                                        <tr>
-                                            <td>{{ match.id }}</td>
-                                            <td>{{ match.deposit_ids|join(', ') }}</td>
-                                            <td>{{ match.withdrawal_id }}</td>
-                                            <td>{{ "%.2f"|format(match.amount) }} ₽</td>
-                                            <td>{{ (match.commission * 100)|round(2) }}%</td>
-                                            <td>
-                                                <form method="POST" action="/api/admin/matches/{{ match.id }}/confirm" class="d-inline">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Подтвердить матчинг #{{ match.id }}?')">
-                                                        <i class="fas fa-check"></i> Подтвердить
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        {% else %}
-                                        <tr>
-                                            <td colspan="6" class="text-center">Нет найденных совпадений</td>
-                                        </tr>
-                                        {% endfor %}
+                                    <tbody id="matchesList">
+                                        <!-- Will be populated by JavaScript -->
                                     </tbody>
                                 </table>
                             </div>
@@ -842,31 +921,30 @@
                     <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Настройки комиссий и курсов</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="POST" action="/api/admin/settings">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <form id="settingsForm">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Комиссия по умолчанию (%)</label>
-                            <input type="number" class="form-control" name="default_fee" step="0.01" min="0" max="10" value="{{ settings.default_fee if settings else 0.02 }}">
+                            <input type="number" class="form-control" id="defaultFee" step="0.01" min="0" max="10">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Комиссия трейдера (%)</label>
-                            <input type="number" class="form-control" name="trader_fee" step="0.01" min="0" max="10" value="{{ settings.trader_fee if settings else 0.015 }}">
+                            <input type="number" class="form-control" id="traderFee" step="0.01" min="0" max="10">
                         </div>
                         <hr>
                         <h6 class="mb-3">Курсы валют</h6>
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">USD</label>
-                                <input type="number" class="form-control" name="usd_rate" step="0.01" min="0" value="{{ settings.usd_rate if settings else 75.0 }}">
+                                <input type="number" class="form-control" id="usdRate" step="0.01" min="0">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">EUR</label>
-                                <input type="number" class="form-control" name="eur_rate" step="0.01" min="0" value="{{ settings.eur_rate if settings else 85.0 }}">
+                                <input type="number" class="form-control" id="eurRate" step="0.01" min="0">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">USDT</label>
-                                <input type="number" class="form-control" name="usdt_rate" step="0.01" min="0" value="{{ settings.usdt_rate if settings else 1.0 }}">
+                                <input type="number" class="form-control" id="usdtRate" step="0.01" min="0">
                             </div>
                         </div>
                     </div>
@@ -886,9 +964,143 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Консоль для логов -->
+    <button id="log-toggle" title="Показать/скрыть логи">
+        <i class="fas fa-terminal"></i>
+    </button>
+    <div id="log-console"></div>
+
     <script>
+        // Логирование всех запросов
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const startTime = new Date();
+            let method = 'GET';
+            let url = args[0];
+            
+            if (args[1]) {
+                method = args[1].method || 'GET';
+                url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            }
+            
+            logRequest(method, url, args[1] ? args[1].body : null);
+            
+            try {
+                const response = await originalFetch.apply(this, args);
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                
+                // Клонируем response для чтения body без потребления оригинального потока
+                const clonedResponse = response.clone();
+                let responseData = null;
+                
+                try {
+                    responseData = await clonedResponse.json();
+                } catch (e) {
+                    // Если не JSON, попробуем как текст
+                    try {
+                        responseData = await clonedResponse.text();
+                    } catch (e) {
+                        responseData = '[Не удалось прочитать ответ]';
+                    }
+                }
+                
+                logResponse(method, url, response.status, duration, responseData);
+                return response;
+            } catch (error) {
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                logError(method, url, error, duration);
+                throw error;
+            }
+        };
+
+        // Функции логирования
+        function logRequest(method, url, body) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let bodyInfo = '';
+            if (body) {
+                try {
+                    const parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
+                    bodyInfo = `<span class="log-info">Body: ${JSON.stringify(parsedBody, null, 2)}</span>`;
+                } catch (e) {
+                    bodyInfo = `<span class="log-info">Body: ${body}</span>`;
+                }
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                ${bodyInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logResponse(method, url, status, duration, data) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let dataInfo = '';
+            if (data) {
+                dataInfo = `<span class="log-info">Response: ${JSON.stringify(data, null, 2)}</span>`;
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-status">${status}</span>
+                <span class="log-success">(${duration}ms)</span>
+                ${dataInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(method, url, error, duration) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-error">ERROR: ${error.message}</span>
+                <span class="log-error">(${duration}ms)</span>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function scrollLogsToBottom() {
+            const console = document.getElementById('log-console');
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Переключение консоли логов
+        document.getElementById('log-toggle').addEventListener('click', function() {
+            const console = document.getElementById('log-console');
+            if (console.style.display === 'block') {
+                console.style.display = 'none';
+            } else {
+                console.style.display = 'block';
+            }
+        });
+
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
+            logInfo('Инициализация админ панели', 'Загрузка DOM завершена');
+            
             // Навигация между разделами
             document.querySelectorAll('.nav-link[data-section]').forEach(item => {
                 item.addEventListener('click', function(e) {
@@ -910,6 +1122,8 @@
                     // Показываем выбранный раздел
                     const sectionId = this.getAttribute('data-section') + '-section';
                     document.getElementById(sectionId).classList.add('active');
+                    
+                    logInfo('Навигация', `Переход в раздел: ${this.getAttribute('data-section')}`);
                 });
             });
             
@@ -921,37 +1135,466 @@
                 order: [[0, 'desc']]
             });
             
+            logInfo('DataTables', 'Таблица пользователей инициализирована');
+            
             // Переключение сайдбара
             document.getElementById('menu-toggle').addEventListener('click', function() {
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar.style.display === 'none') {
                     sidebar.style.display = 'block';
+                    logInfo('UI', 'Сайдбар показан');
                 } else {
                     sidebar.style.display = 'none';
+                    logInfo('UI', 'Сайдбар скрыт');
                 }
             });
 
-            // Обработка отправки форм
-            document.querySelectorAll('form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const buttons = this.querySelectorAll('button[type="submit"]');
-                    buttons.forEach(btn => {
-                        btn.disabled = true;
-                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+            // Обработчик для кнопок подтверждения транзакций
+            document.addEventListener('click', async function(e) {
+                if (e.target.closest('.complete-tx')) {
+                    const button = e.target.closest('.complete-tx');
+                    const txId = button.dataset.txId;
+                    
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+                    
+                    logInfo('Транзакции', `Подтверждение транзакции ID: ${txId}`);
+                    
+                    try {
+                        const response = await fetch(`/api/transactions/${txId}/complete`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token() }}'
+                            },
+                            credentials: 'same-origin'
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            // Обновляем строку в таблице
+                            const row = button.closest('tr');
+                            if (row) {
+                                // Обновляем статус
+                                const statusCell = row.querySelector('td:nth-child(4)');
+                                if (statusCell) {
+                                    statusCell.innerHTML = '<span class="badge bg-success">completed</span>';
+                                }
+                                
+                                // Убираем кнопку
+                                const actionsCell = row.querySelector('td:nth-child(5)');
+                                if (actionsCell) actionsCell.innerHTML = '';
+                            }
+                            
+                            // Показываем уведомление
+                            showToast('Транзакция успешно подтверждена', 'success');
+                            logSuccess('Транзакции', `Транзакция ID: ${txId} подтверждена`);
+                        } else {
+                            throw new Error(result.error || 'Неизвестная ошибка');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка подтверждения транзакции:', error);
+                        showToast(`Ошибка: ${error.message}`, 'error');
+                        logError('Транзакции', `Ошибка подтверждения транзакции ID: ${txId}`, error);
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-check"></i> Подтвердить';
+                    }
+                }
+            });
+
+            // Загрузка данных для модального окна депозитов
+            $('#depositsModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка ожидающих депозитов');
+                
+                try {
+                    const response = await fetch('/api/admin/pending-deposits');
+                    const deposits = await response.json();
+                    
+                    const tableBody = document.getElementById('pendingDepositsTable');
+                    tableBody.innerHTML = '';
+                    
+                    if (deposits.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Нет ожидающих депозитов</td></tr>';
+                        logInfo('Депозиты', 'Нет ожидающих депозитов');
+                        return;
+                    }
+                    
+                    deposits.forEach(deposit => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${deposit.id}</td>
+                            <td>${deposit.user_email}</td>
+                            <td>${deposit.amount.toFixed(2)} ₽</td>
+                            <td>${new Date(deposit.created_at).toLocaleString()}</td>
+                            <td>
+                                <button class="btn btn-sm btn-success complete-deposit" data-deposit-id="${deposit.id}">
+                                    <i class="fas fa-check"></i> Подтвердить
+                                </button>
+                                <button class="btn btn-sm btn-danger reject-deposit" data-deposit-id="${deposit.id}">
+                                    <i class="fas fa-times"></i> Отклонить
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
                     });
-                });
+                    
+                    logSuccess('Депозиты', `Загружено ${deposits.length} ожидающих депозитов`);
+                    
+                    // Обработчики для кнопок подтверждения/отклонения
+                    document.querySelectorAll('.complete-deposit').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const depositId = this.dataset.depositId;
+                            logInfo('Депозиты', `Подтверждение депозита ID: ${depositId}`);
+                            
+                            try {
+                                const response = await fetch(`/api/admin/deposits/${depositId}/complete`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token() }}'
+                                    }
+                                });
+                                
+                                if (response.ok) {
+                                    showToast('Депозит успешно подтвержден', 'success');
+                                    $('#depositsModal').modal('hide');
+                                    logSuccess('Депозиты', `Депозит ID: ${depositId} подтвержден`);
+                                    location.reload();
+                                } else {
+                                    const error = await response.json();
+                                    throw new Error(error.error || 'Ошибка подтверждения депозита');
+                                }
+                            } catch (error) {
+                                showToast(`Ошибка: ${error.message}`, 'error');
+                                logError('Депозиты', `Ошибка подтверждения депозита ID: ${depositId}`, error);
+                            }
+                        });
+                    });
+                    
+                    document.querySelectorAll('.reject-deposit').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const depositId = this.dataset.depositId;
+                            logInfo('Депозиты', `Отклонение депозита ID: ${depositId}`);
+                            
+                            try {
+                                const response = await fetch(`/api/admin/deposits/${depositId}/reject`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token() }}'
+                                    }
+                                });
+                                
+                                if (response.ok) {
+                                    showToast('Депозит отклонен', 'success');
+                                    $('#depositsModal').modal('hide');
+                                    logSuccess('Депозиты', `Депозит ID: ${depositId} отклонен`);
+                                    location.reload();
+                                } else {
+                                    const error = await response.json();
+                                    throw new Error(error.error || 'Ошибка отклонения депозита');
+                                }
+                            } catch (error) {
+                                showToast(`Ошибка: ${error.message}`, 'error');
+                                logError('Депозиты', `Ошибка отклонения депозита ID: ${depositId}`, error);
+                            }
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки депозитов:', error);
+                    document.getElementById('pendingDepositsTable').innerHTML = 
+                        '<tr><td colspan="5" class="text-center">Ошибка загрузки данных</td></tr>';
+                    logError('Депозиты', 'Ошибка загрузки ожидающих депозитов', error);
+                }
+            });
+
+            // Загрузка данных для модального окна баланса платформы
+            $('#platformBalanceModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка баланса платформы');
+                
+                try {
+                    const response = await fetch('/api/admin/platform-balance');
+                    const data = await response.json();
+                    
+                    document.getElementById('totalBalance').textContent = data.total_balance.toFixed(2) + ' ₽';
+                    document.getElementById('availableBalance').textContent = data.available_balance.toFixed(2) + ' ₽';
+                    
+                    const distributionBody = document.getElementById('balanceDistribution');
+                    distributionBody.innerHTML = '';
+                    
+                    data.distribution.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.type}</td>
+                            <td>${item.amount.toFixed(2)} ₽</td>
+                            <td>${item.percentage}%</td>
+                        `;
+                        distributionBody.appendChild(row);
+                    });
+                    
+                    const usersBody = document.getElementById('usersBalances');
+                    usersBody.innerHTML = '';
+                    
+                    data.users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.email}</td>
+                            <td>
+                                <span class="badge bg-${ 
+                                    user.role === 'admin' ? 'primary' : 
+                                    user.role === 'trader' ? 'success' : 'warning'
+                                }">${user.role}</span>
+                            </td>
+                            <td>${user.balance ? user.balance.toFixed(2) : '0.00'} ₽</td>
+                        `;
+                        usersBody.appendChild(row);
+                    });
+                    
+                    logSuccess('Баланс', 'Данные баланса платформы успешно загружены');
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки баланса платформы:', error);
+                    showToast('Ошибка загрузки данных баланса', 'error');
+                    logError('Баланс', 'Ошибка загрузки баланса платформы', error);
+                }
+            });
+
+            // Загрузка данных для модального окна матчинга
+            $('#matchingModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка данных для матчинга транзакций');
+                await loadMatchingData();
+            });
+
+            // Кнопка запуска матчинга
+            document.getElementById('runMatchingBtn').addEventListener('click', async function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Обработка...';
+                logInfo('Матчинг', 'Запуск процесса матчинга транзакций');
+                
+                try {
+                    const response = await fetch('/api/admin/matching/run', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token() }}'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(`Найдено ${result.matches_count} совпадений`, 'success');
+                        logSuccess('Матчинг', `Найдено ${result.matches_count} совпадений`);
+                        await loadMatchingData();
+                    } else {
+                        throw new Error(result.error || 'Ошибка выполнения матчинга');
+                    }
+                } catch (error) {
+                    showToast(`Ошибка: ${error.message}`, 'error');
+                    logError('Матчинг', 'Ошибка выполнения матчинга', error);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-sync me-1"></i>Запустить матчинг';
+                }
+            });
+
+            // Загрузка данных для модального окна настроек
+            $('#settingsModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка настроек платформы');
+                
+                try {
+                    const response = await fetch('/api/admin/settings');
+                    const settings = await response.json();
+                    
+                    document.getElementById('defaultFee').value = settings.default_fee;
+                    document.getElementById('traderFee').value = settings.trader_fee;
+                    document.getElementById('usdRate').value = settings.usd_rate;
+                    document.getElementById('eurRate').value = settings.eur_rate;
+                    document.getElementById('usdtRate').value = settings.usdt_rate;
+                    
+                    logSuccess('Настройки', 'Настройки успешно загружены');
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки настроек:', error);
+                    showToast('Ошибка загрузки настроек', 'error');
+                    logError('Настройки', 'Ошибка загрузки настроек', error);
+                }
+            });
+
+            // Сохранение настроек
+            document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                logInfo('Настройки', 'Сохранение новых настроек');
+                
+                const saveBtn = this.querySelector('button[type="submit"]');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Сохранение...';
+                
+                try {
+                    const settings = {
+                        default_fee: parseFloat(document.getElementById('defaultFee').value),
+                        trader_fee: parseFloat(document.getElementById('traderFee').value),
+                        usd_rate: parseFloat(document.getElementById('usdRate').value),
+                        eur_rate: parseFloat(document.getElementById('eurRate').value),
+                        usdt_rate: parseFloat(document.getElementById('usdtRate').value)
+                    };
+                    
+                    logInfo('Настройки', `Отправка новых настроек: ${JSON.stringify(settings)}`);
+                    
+                    const response = await fetch('/api/admin/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(settings)
+                    });
+                    
+                    if (response.ok) {
+                        showToast('Настройки успешно сохранены', 'success');
+                        $('#settingsModal').modal('hide');
+                        logSuccess('Настройки', 'Настройки успешно сохранены');
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка сохранения настроек');
+                    }
+                } catch (error) {
+                    showToast(`Ошибка: ${error.message}`, 'error');
+                    logError('Настройки', 'Ошибка сохранения настроек', error);
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = 'Сохранить';
+                }
             });
         });
 
+        // Функция загрузки данных для матчинга
+        async function loadMatchingData() {
+            logInfo('Матчинг', 'Загрузка данных для матчинга');
+            
+            try {
+                // Загрузка ожидающих депозитов
+                const depositsResponse = await fetch('/api/admin/pending-deposits');
+                const deposits = await depositsResponse.json();
+                
+                const depositsList = document.getElementById('pendingDepositsList');
+                depositsList.innerHTML = '';
+                
+                if (deposits.length === 0) {
+                    depositsList.innerHTML = '<tr><td colspan="3" class="text-center">Нет ожидающих депозитов</td></tr>';
+                    logInfo('Матчинг', 'Нет ожидающих депозитов');
+                } else {
+                    deposits.forEach(deposit => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${deposit.id}</td>
+                            <td>${deposit.amount.toFixed(2)} ₽</td>
+                            <td>${deposit.user_email || 'Неизвестно'}</td>
+                        `;
+                        depositsList.appendChild(row);
+                    });
+                    logInfo('Матчинг', `Загружено ${deposits.length} ожидающих депозитов`);
+                }
+                
+                // Загрузка ожидающих выводов
+                const withdrawalsResponse = await fetch('/api/admin/transactions?status=pending&type=withdrawal');
+                const withdrawals = await withdrawalsResponse.json();
+                
+                const withdrawalsList = document.getElementById('pendingWithdrawalsList');
+                withdrawalsList.innerHTML = '';
+                
+                if (withdrawals.length === 0) {
+                    withdrawalsList.innerHTML = '<tr><td colspan="3" class="text-center">Нет ожидающих выводов</td></tr>';
+                    logInfo('Матчинг', 'Нет ожидающих выводов');
+                } else {
+                    withdrawals.forEach(withdrawal => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${withdrawal.id}</td>
+                            <td>${withdrawal.amount.toFixed(2)} ₽</td>
+                            <td>${withdrawal.user_email || 'Неизвестно'}</td>
+                        `;
+                        withdrawalsList.appendChild(row);
+                    });
+                    logInfo('Матчинг', `Загружено ${withdrawals.length} ожидающих выводов`);
+                }
+                
+                // Загрузка найденных совпадений
+                const matchesResponse = await fetch('/api/admin/matches');
+                const matches = await matchesResponse.json();
+                
+                const matchesList = document.getElementById('matchesList');
+                matchesList.innerHTML = '';
+                
+                if (matches.length === 0) {
+                    matchesList.innerHTML = '<tr><td colspan="6" class="text-center">Нет найденных совпадений</td></tr>';
+                    logInfo('Матчинг', 'Нет найденных совпадений');
+                } else {
+                    matches.forEach(match => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${match.id}</td>
+                            <td>${match.deposit_ids.join(', ')}</td>
+                            <td>${match.withdrawal_id}</td>
+                            <td>${match.amount.toFixed(2)} ₽</td>
+                            <td>${(match.commission * 100).toFixed(2)}%</td>
+                            <td>
+                                <button class="btn btn-sm btn-success confirm-match" data-match-id="${match.id}">
+                                    <i class="fas fa-check"></i> Подтвердить
+                                </button>
+                            </td>
+                        `;
+                        matchesList.appendChild(row);
+                    });
+                    
+                    logInfo('Матчинг', `Загружено ${matches.length} совпадений`);
+                    
+                    // Обработчики для кнопок подтверждения матчинга
+                    document.querySelectorAll('.confirm-match').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const matchId = this.dataset.matchId;
+                            logInfo('Матчинг', `Подтверждение совпадения ID: ${matchId}`);
+                            
+                            try {
+                                const response = await fetch(`/api/admin/matches/${matchId}/confirm`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token() }}'
+                                    }
+                                });
+                                
+                                if (response.ok) {
+                                    showToast('Матчинг успешно подтвержден', 'success');
+                                    logSuccess('Матчинг', `Совпадение ID: ${matchId} подтверждено`);
+                                    await loadMatchingData();
+                                } else {
+                                    const error = await response.json();
+                                    throw new Error(error.error || 'Ошибка подтверждения матчинга');
+                                }
+                            } catch (error) {
+                                showToast(`Ошибка: ${error.message}`, 'error');
+                                logError('Матчинг', `Ошибка подтверждения совпадения ID: ${matchId}`, error);
+                            }
+                        });
+                    });
+                }
+                
+                logSuccess('Матчинг', 'Данные для матчинга успешно загружены');
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных матчинга:', error);
+                showToast('Ошибка загрузки данных матчинга', 'error');
+                logError('Матчинг', 'Ошибка загрузки данных матчинга', error);
+            }
+        }
+
         // Функция показа уведомлений
         function showToast(message, type) {
-            const toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            toastContainer.style.position = 'fixed';
-            toastContainer.style.bottom = '20px';
-            toastContainer.style.right = '20px';
-            toastContainer.style.zIndex = '1100';
-            document.body.appendChild(toastContainer);
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
             
             const toast = document.createElement('div');
             toast.className = `toast show align-items-center text-white bg-${type} border-0`;
@@ -976,6 +1619,56 @@
                 toast.addEventListener('hidden.bs.toast', () => toast.remove());
             }, 5000);
         }
+
+        // Дополнительные функции логирования
+        function logInfo(category, message) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-info">[${category}] ${message}</span>
+            `;
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logSuccess(category, message) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-success">[${category}] ${message}</span>
+            `;
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(category, message, error) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let errorDetails = '';
+            if (error instanceof Error) {
+                errorDetails = `${error.message}<br>Stack: ${error.stack}`;
+            } else if (typeof error === 'object') {
+                errorDetails = JSON.stringify(error, null, 2);
+            } else {
+                errorDetails = String(error);
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-error">[${category}] ${message}</span>
+                <div class="log-error-details">${errorDetails}</div>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
     </script>
+    <div id="toast-container"></div>
 </body>
 </html>
