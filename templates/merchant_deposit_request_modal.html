@@ -1,0 +1,174 @@
+{% block modals %}
+<!-- Модальное окно заявки на пополнение баланса -->
+<div class="modal fade" id="depositRequestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Заявка на пополнение баланса</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="depositRequestForm">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Сумма</label>
+            <input type="number" class="form-control" name="amount" step="0.01" min="10" required>
+            <small class="text-muted">Минимальная сумма: 10 RUB</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Валюта</label>
+            <select class="form-select" name="currency" required>
+              <option value="RUB">RUB</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="USDT">USDT</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Метод оплаты</label>
+            <select class="form-select" name="payment_method" required id="paymentMethodSelect">
+              <option value="">Выберите метод</option>
+              <option value="bank">Банковский перевод</option>
+              <option value="card">Банковская карта</option>
+              <option value="crypto">Криптовалюта</option>
+            </select>
+          </div>
+          <div id="depositRequisitesFields">
+            <!-- Поля реквизитов будут подгружаться динамически -->
+            <div class="alert alert-info">Выберите метод оплаты для отображения реквизитов</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="submitDepositBtn">Отправить заявку</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Динамическая загрузка полей реквизитов
+  document.getElementById('paymentMethodSelect').addEventListener('change', function() {
+    const method = this.value;
+    const container = document.getElementById('depositRequisitesFields');
+    
+    if (!method) {
+      container.innerHTML = '<div class="alert alert-info">Выберите метод оплаты для отображения реквизитов</div>';
+      return;
+    }
+    
+    container.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+    
+    fetch(`/api/requisites/types?method=${method}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Ошибка загрузки реквизитов');
+        return response.json();
+      })
+      .then(data => {
+        if (!data.fields || !data.fields.length) {
+          throw new Error('Для выбранного метода нет полей реквизитов');
+        }
+        
+        container.innerHTML = data.fields.map(field => {
+          if (field.type === 'select') {
+            return `
+              <div class="mb-3">
+                <label class="form-label">${field.label}</label>
+                <select class="form-select" name="details.${field.name}" required>
+                  ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                </select>
+              </div>
+            `;
+          }
+          
+          const inputType = field.type === 'password' ? 'password' : 'text';
+          return `
+            <div class="mb-3">
+              <label class="form-label">${field.label}</label>
+              <input type="${inputType}" class="form-control" name="details.${field.name}" required>
+            </div>
+          `;
+        }).join('');
+      })
+      .catch(error => {
+        console.error('Error loading requisites:', error);
+        container.innerHTML = `
+          <div class="alert alert-danger">
+            ${error.message || 'Не удалось загрузить реквизиты. Попробуйте позже.'}
+          </div>
+        `;
+      });
+  });
+
+  // Отправка заявки на пополнение
+  document.getElementById('depositRequestForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitDepositBtn');
+    
+    // Валидация
+    if (!formData.get('payment_method')) {
+      showToast('Выберите метод оплаты', 'error');
+      return;
+    }
+    
+    if (parseFloat(formData.get('amount')) < 10) {
+      showToast('Минимальная сумма пополнения - 10 RUB', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+    
+    const requestData = {
+      amount: parseFloat(formData.get('amount')),
+      currency: formData.get('currency'),
+      payment_method: formData.get('payment_method'),
+      details: {}
+    };
+
+    // Сбор реквизитов
+    formData.forEach((value, key) => {
+      if (key.startsWith('details.')) {
+        const fieldName = key.replace('details.', '');
+        requestData.details[fieldName] = value;
+      }
+    });
+
+    fetch('/api/deposit_requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify(requestData)
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => { 
+          throw new Error(err.error || 'Ошибка сервера'); 
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      showToast('Заявка успешно отправлена!', 'success');
+      form.reset();
+      const modal = bootstrap.Modal.getInstance(document.getElementById('depositRequestModal'));
+      modal.hide();
+      setTimeout(() => window.location.reload(), 1500);
+    })
+    .catch(error => {
+      console.error('Deposit request error:', error);
+      showToast(error.message || 'Ошибка при отправке заявки', 'error');
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Отправить заявку';
+    });
+  });
+});
+</script>
+{% endblock %}

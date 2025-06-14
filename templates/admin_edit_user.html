@@ -1,0 +1,40 @@
+{% extends "admin.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <h1><i class="fas fa-user-edit me-2"></i>Редактирование пользователя</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Новый пароль (оставьте пустым, чтобы не менять)</label>
+                    <input type="password" class="form-control" name="password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Роль</label>
+                    <select class="form-select" name="role" required>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Администратор</option>
+                        <option value="trader" {% if user.role == 'trader' %}selected{% endif %}>Трейдер</option>
+                        <option value="merchant" {% if user.role == 'merchant' %}selected{% endif %}>Мерчант</option>
+                    </select>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" name="active" id="active" {% if user.active %}checked{% endif %}>
+                    <label class="form-check-label" for="active">Активен</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <a href="/admin.html" class="btn btn-secondary">Отмена</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

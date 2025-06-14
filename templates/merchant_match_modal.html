@@ -1,0 +1,133 @@
+{% block modals %}
+<!-- Модальное окно подтверждения матчинга -->
+<div class="modal fade" id="matchModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Подтверждение матчинга</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="matchDetails">
+          <!-- Детали матчинга будут загружаться динамически -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="confirmMatchBtn">Подтвердить</button>
+        <button type="button" class="btn btn-danger" id="rejectMatchBtn">Отклонить</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Глобальная переменная для хранения ID текущего матча
+let currentMatchId = null;
+
+// Функция загрузки деталей матча
+function loadMatchDetails(matchId) {
+  currentMatchId = matchId;
+  fetch(`/api/merchant/matches/${matchId}`)
+    .then(response => response.json())
+    .then(match => {
+      document.getElementById('matchDetails').innerHTML = `
+        <h6>Детали совпадения</h6>
+        <p><strong>ID:</strong> ${match.id}</p>
+        <p><strong>Сумма:</strong> ${match.amount} ${match.currency}</p>
+        <p><strong>Комиссия:</strong> ${(match.commission * 100).toFixed(1)}%</p>
+        <p><strong>Депозиты:</strong></p>
+        <ul>
+          ${match.deposit_ids.map(id => `<li>${id}</li>`).join('')}
+        </ul>
+        <p><strong>Выплата:</strong> ${match.withdrawal_id}</p>
+      `;
+    })
+    .catch(error => {
+      console.error('Error loading match details:', error);
+      showToast('Ошибка загрузки деталей матча', 'error');
+    });
+}
+
+// Обработчики кнопок подтверждения/отклонения
+document.getElementById('confirmMatchBtn').addEventListener('click', function() {
+  if (!currentMatchId) return;
+  
+  this.disabled = true;
+  this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Подтверждение...';
+  
+  fetch(`/api/merchant/matches/${currentMatchId}/confirm`, {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Token': '{{ csrf_token() }}'
+    }
+  })
+  .then(response => {
+    if (response.ok) {
+      showToast('Матч успешно подтвержден', 'success');
+      const modal = bootstrap.Modal.getInstance(document.getElementById('matchModal'));
+      modal.hide();
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      throw new Error('Ошибка подтверждения');
+    }
+  })
+  .catch(error => {
+    showToast(error.message, 'error');
+    this.disabled = false;
+    this.innerHTML = 'Подтвердить';
+  });
+});
+
+document.getElementById('rejectMatchBtn').addEventListener('click', function() {
+  if (!currentMatchId) return;
+  
+  Swal.fire({
+    title: 'Укажите причину отклонения',
+    input: 'text',
+    inputPlaceholder: 'Причина отклонения',
+    showCancelButton: true,
+    confirmButtonText: 'Отправить',
+    cancelButtonText: 'Отмена',
+    inputValidator: (value) => {
+      if (!value) {
+        return 'Пожалуйста, укажите причину!';
+      }
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      this.disabled = true;
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+      
+      fetch(`/api/merchant/matches/${currentMatchId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+          reason: result.value
+        })
+      })
+      .then(response => {
+        if (response.ok) {
+          showToast('Матч отклонен', 'success');
+          const modal = bootstrap.Modal.getInstance(document.getElementById('matchModal'));
+          modal.hide();
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          throw new Error('Ошибка отклонения');
+        }
+      })
+      .catch(error => {
+        showToast(error.message, 'error');
+        this.disabled = false;
+        this.innerHTML = 'Отклонить';
+      });
+    }
+  });
+});
+</script>
+{% endblock %}

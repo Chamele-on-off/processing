@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Трейдер | Processing Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        :root {
+            --sidebar-bg: #212529;
+            --sidebar-text: #e9ecef;
+            --sidebar-active-bg: #495057;
+            --sidebar-hover-bg: #343a40;
+            --primary: #4e73df;
+            --success: #1cc88a;
+            --info: #36b9cc;
+            --warning: #f6c23e;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        #sidebar-wrapper {
+            min-height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            transition: margin 0.25s ease-out;
+        }
+        
+        #sidebar-wrapper .sidebar-heading {
+            font-size: 1.2rem;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            color: white;
+            text-align: center;
+        }
+        
+        #sidebar-wrapper .list-group {
+            width: 250px;
+        }
+        
+        #sidebar-wrapper .list-group-item {
+            background-color: transparent;
+            color: var(--sidebar-text);
+            border: none;
+            border-radius: 0;
+            padding: 1rem 1.25rem;
+            transition: all 0.3s;
+        }
+        
+        #sidebar-wrapper .list-group-item.active {
+            background-color: var(--sidebar-active-bg);
+            color: white;
+            font-weight: 600;
+        }
+        
+        #sidebar-wrapper .list-group-item:hover:not(.active) {
+            background-color: var(--sidebar-hover-bg);
+        }
+        
+        #sidebar-wrapper .list-group-item i {
+            width: 20px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        
+        #page-content-wrapper {
+            min-width: 0;
+            width: 100%;
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .card-header {
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.35rem;
+        }
+        
+        .border-start-primary { border-left: 0.25rem solid var(--primary) !important; }
+        .border-start-success { border-left: 0.25rem solid var(--success) !important; }
+        .border-start-info { border-left: 0.25rem solid var(--info) !important; }
+        .border-start-warning { border-left: 0.25rem solid var(--warning) !important; }
+        
+        .page-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .page-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        #wrapper.toggled #sidebar-wrapper {
+            margin-left: -250px;
+        }
+        
+        .badge-status {
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            border-radius: 50rem;
+        }
+        
+        .filter-card {
+            background-color: #f8f9fc;
+            border-left: 0.25rem solid var(--primary);
+        }
+        
+        .api-key {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            word-break: break-all;
+        }
+        
+        .detail-card {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .detail-card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="d-flex" id="wrapper">
+    <!-- Sidebar -->
+    <div class="text-white" id="sidebar-wrapper">
+        <div class="sidebar-heading">
+            <i class="fas fa-chart-line me-2"></i>Трейдер
+        </div>
+        <div class="list-group list-group-flush">
+            <a href="#" class="list-group-item list-group-item-action active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt me-2"></i> Дашборд
+            </a>
+            <a href="#" class="list-group-item list-group-item-action" data-section="orders">
+                <i class="fas fa-exchange-alt me-2"></i> Заявки
+            </a>
+            <a href="#" class="list-group-item list-group-item-action" data-section="merchant">
+                <i class="fas fa-store me-2"></i> Транзакции мерчанта
+            </a>
+            <a href="#" class="list-group-item list-group-item-action" data-section="details">
+                <i class="fas fa-credit-card me-2"></i> Реквизиты
+            </a>
+            <a href="/" class="list-group-item list-group-item-action">
+                <i class="fas fa-home me-2"></i> На главную
+            </a>
+        </div>
+    </div>
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3">
+            <div class="container-fluid px-4">
+                <button class="btn btn-link me-2" id="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <div class="navbar-nav ms-auto">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> {{ user.email }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="/logout">
+                                    <i class="fas fa-sign-out-alt me-2"></i> Выйти
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="container-fluid px-4 py-4 page-section active">
+            <h1 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i>Дашборд</h1>
+            
+            <div class="row">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-start-primary h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Баланс</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="balance-value">
+                                        {{ "%.2f"|format(user.balance) }} ₽
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">Активные заявки</h6>
+                            <button class="btn btn-sm btn-primary" id="newOrderBtn">
+                                <i class="fas fa-plus me-1"></i> Новая
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover" id="activeOrders">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Тип</th>
+                                            <th>Сумма</th>
+                                            <th>Статус</th>
+                                            <th>Дата</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in active_orders %}
+                                        <tr>
+                                            <td>{{ order.id }}</td>
+                                            <td>{{ 'Пополнение' if order.type == 'deposit' else 'Вывод' }}</td>
+                                            <td>{{ "%.2f"|format(order.amount) }} ₽</td>
+                                            <td>
+                                                <span class="badge bg-{{ 
+                                                    'success' if order.status == 'completed' 
+                                                    else 'warning' if order.status == 'pending' 
+                                                    else 'danger' 
+                                                }}">
+                                                    {{ order.status }}
+                                                </span>
+                                            </td>
+                                            <td>{{ order.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">Быстрые действия</h6>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-success w-100 mb-3" id="enableDepositBtn">
+                                <i class="fas fa-toggle-on me-2"></i> Включить депозиты
+                            </button>
+                            <button class="btn btn-danger w-100 mb-3" id="disableDepositBtn">
+                                <i class="fas fa-toggle-off me-2"></i> Выключить депозиты
+                            </button>
+                            <button class="btn btn-primary w-100" id="addDetailsBtn">
+                                <i class="fas fa-plus-circle me-2"></i> Добавить реквизиты
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Section -->
+        <div id="orders-section" class="container-fluid px-4 py-4 page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-exchange-alt me-2"></i>Заявки</h1>
+                <button class="btn btn-primary" id="newOrderBtn2">
+                    <i class="fas fa-plus me-2"></i> Новая заявка
+                </button>
+            </div>
+            
+            <div class="card filter-card mb-4">
+                <div class="card-body">
+                    <form id="ordersFilterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select" name="status">
+                                    <option value="all">Все</option>
+                                    <option value="pending">В ожидании</option>
+                                    <option value="processing">В обработке</option>
+                                    <option value="completed">Завершено</option>
+                                    <option value="failed">Ошибка</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Тип</label>
+                                <select class="form-select" name="type">
+                                    <option value="all">Все</option>
+                                    <option value="deposit">Депозит</option>
+                                    <option value="withdrawal">Вывод</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата с</label>
+                                <input type="date" class="form-control" name="date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата по</label>
+                                <input type="date" class="form-control" name="date_to">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col text-end">
+                                <button type="reset" class="btn btn-outline-secondary me-2">Сбросить</button>
+                                <button type="submit" class="btn btn-primary">Применить</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Список заявок</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Тип</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in all_orders %}
+                                <tr>
+                                    <td>{{ order.id }}</td>
+                                    <td>{{ 'Пополнение' if order.type == 'deposit' else 'Вывод' }}</td>
+                                    <td>{{ "%.2f"|format(order.amount) }} ₽</td>
+                                    <td>
+                                        <span class="badge bg-{{ 
+                                            'success' if order.status == 'completed' 
+                                            else 'warning' if order.status == 'pending' 
+                                            else 'danger' 
+                                        }}">
+                                            {{ order.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ order.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary view-order-btn" data-order-id="{{ order.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Merchant Transactions Section -->
+        <div id="merchant-section" class="container-fluid px-4 py-4 page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-store me-2"></i>Транзакции мерчанта</h1>
+            </div>
+            
+            <div class="card filter-card mb-4">
+                <div class="card-body">
+                    <form id="merchantFilterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select" name="status">
+                                    <option value="all">Все</option>
+                                    <option value="pending">В ожидании</option>
+                                    <option value="completed">Завершено</option>
+                                    <option value="failed">Ошибка</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата с</label>
+                                <input type="date" class="form-control" name="date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата по</label>
+                                <input type="date" class="form-control" name="date_to">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ID транзакции</label>
+                                <input type="text" class="form-control" name="transaction_id" placeholder="Введите ID">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col text-end">
+                                <button type="reset" class="btn btn-outline-secondary me-2">Сбросить</button>
+                                <button type="submit" class="btn btn-primary">Применить</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Список транзакций</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="merchantTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Сумма</th>
+                                    <th>Комиссия</th>
+                                    <th>Статус</th>
+                                    <th>Метод</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in merchant_transactions %}
+                                <tr>
+                                    <td>{{ transaction.id }}</td>
+                                    <td>{{ "%.2f"|format(transaction.amount) }} ₽</td>
+                                    <td>{{ "%.2f"|format(transaction.fee|default(0)) }} ₽</td>
+                                    <td>
+                                        <span class="badge bg-{{ 
+                                            'success' if transaction.status == 'completed' 
+                                            else 'warning' if transaction.status == 'pending' 
+                                            else 'danger' 
+                                        }}">
+                                            {{ transaction.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ transaction.method }}</td>
+                                    <td>{{ transaction.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary view-merchant-btn" data-transaction-id="{{ transaction.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Section -->
+        <div id="details-section" class="container-fluid px-4 py-4 page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-credit-card me-2"></i>Реквизиты</h1>
+                <button class="btn btn-primary" id="addDetailsBtn2" data-bs-toggle="modal" data-bs-target="#addDetailsModal">
+                    <i class="fas fa-plus me-2"></i> Добавить
+                </button>
+            </div>
+            
+            <div class="row">
+                {% for detail in details %}
+                <div class="col-md-6 mb-4">
+                    <div class="card detail-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">{{ detail.type }}</h5>
+                                    <p class="card-text text-muted mb-1">
+                                        {{ detail.details }}
+                                    </p>
+                                    <small class="text-muted">Добавлено: {{ detail.created_at|datetimeformat('%d.%m.%Y') }}</small>
+                                </div>
+                                <span class="badge bg-{{ 'success' if detail.status == 'active' else 'warning' }}">
+                                    {{ 'Активен' if detail.status == 'active' else 'На проверке' }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-sm btn-outline-danger me-2 delete-detail-btn" data-detail-id="{{ detail.id }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary edit-detail-btn" data-detail-id="{{ detail.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- New Order Modal -->
+    <div class="modal fade" id="newOrderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая заявка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="newOrderForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Тип заявки</label>
+                            <select class="form-select" name="type" required>
+                                <option value="deposit">Депозит</option>
+                                <option value="withdrawal">Вывод</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Сумма (₽)</label>
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Метод оплаты</label>
+                            <select class="form-select" name="method" required>
+                                <option value="bank_account">Банковский счет</option>
+                                <option value="card">Банковская карта</option>
+                                <option value="crypto">Криптовалюта</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Реквизиты</label>
+                            <select class="form-select" name="details_id" required>
+                                {% for detail in details %}
+                                <option value="{{ detail.id }}">{{ detail.type }} ({{ detail.details }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Детали заявки #<span id="orderDetailId"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <table class="table table-sm">
+                                <tr><th>Тип:</th><td id="orderDetailType"></td></tr>
+                                <tr><th>Сумма:</th><td id="orderDetailAmount"></td></tr>
+                                <tr><th>Метод:</th><td id="orderDetailMethod"></td></tr>
+                                <tr><th>Статус:</th><td id="orderDetailStatus"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Дополнительно</h6>
+                            <table class="table table-sm">
+                                <tr><th>Создана:</th><td id="orderDetailCreated"></td></tr>
+                                <tr><th>Обновлена:</th><td id="orderDetailUpdated"></td></tr>
+                                <tr><th>Реквизиты:</th><td id="orderDetailDetails"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4" id="orderActions">
+                        <button class="btn btn-success me-2" id="completeOrderBtn">
+                            <i class="fas fa-check me-2"></i> Завершить
+                        </button>
+                        <button class="btn btn-danger" id="cancelOrderBtn">
+                            <i class="fas fa-times me-2"></i> Отменить
+                        </button>
+                    </div>
+                    
+                    <h6 class="mb-3">История изменений</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Событие</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderHistory">
+                            <!-- Данные будут загружаться динамически -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merchant Transaction Details Modal -->
+    <div class="modal fade" id="merchantDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Детали транзакции #<span id="merchantDetailId"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <table class="table table-sm">
+                                <tr><th>Сумма:</th><td id="merchantDetailAmount"></td></tr>
+                                <tr><th>Комиссия:</th><td id="merchantDetailFee"></td></tr>
+                                <tr><th>Метод:</th><td id="merchantDetailMethod"></td></tr>
+                                <tr><th>Статус:</th><td id="merchantDetailStatus"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Дополнительно</h6>
+                            <table class="table table-sm">
+                                <tr><th>Создана:</th><td id="merchantDetailCreated"></td></tr>
+                                <tr><th>Обновлена:</th><td id="merchantDetailUpdated"></td></tr>
+                                <tr><th>ID мерчанта:</th><td id="merchantDetailMerchantId"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mb-3">История изменений</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Событие</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody id="merchantHistory">
+                            <!-- Данные будут загружаться динамически -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Details Modal -->
+    <div class="modal fade" id="addDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Добавить реквизиты</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addDetailsForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Тип реквизитов</label>
+                            <select class="form-select" name="type" id="detailTypeSelect" required>
+                                <option value="">Выберите тип</option>
+                                <option value="bank_account">Банковский счет</option>
+                                <option value="card">Банковская карта</option>
+                                <option value="crypto">Криптовалютный кошелек</option>
+                            </select>
+                        </div>
+                        
+                        <div id="bankAccountFields" class="detail-fields">
+                            <div class="mb-3">
+                                <label class="form-label">Номер счета</label>
+                                <input type="text" class="form-control" name="account_number" placeholder="40817810099910004312">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">БИК</label>
+                                <input type="text" class="form-control" name="bik" placeholder="044525225">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Имя владельца</label>
+                                <input type="text" class="form-control" name="owner_name" placeholder="Иванов Иван Иванович">
+                            </div>
+                        </div>
+                        
+                        <div id="cardFields" class="detail-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Номер карты</label>
+                                <input type="text" class="form-control" name="card_number" placeholder="1234 5678 9012 3456">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Имя владельца</label>
+                                <input type="text" class="form-control" name="card_owner" placeholder="IVAN IVANOV">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Срок действия</label>
+                                <input type="text" class="form-control" name="card_expiry" placeholder="MM/YY">
+                            </div>
+                        </div>
+                        
+                        <div id="cryptoFields" class="detail-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Адрес кошелька</label>
+                                <input type="text" class="form-control" name="wallet_address" placeholder="0x71C7656EC7ab88b098defB751B7401B5f6d8976F">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Тип криптовалюты</label>
+                                <select class="form-select" name="crypto_type">
+                                    <option value="BTC">Bitcoin (BTC)</option>
+                                    <option value="ETH">Ethereum (ETH)</option>
+                                    <option value="USDT">Tether (USDT)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Добавить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить эти реквизиты? Это действие нельзя отменить.</p>
+                    <input type="hidden" id="detailIdToDelete">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Навигация между разделами
+            document.querySelectorAll('.list-group-item-action[data-section]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Убираем активный класс у всех элементов меню
+                    document.querySelectorAll('.list-group-item-action').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    
+                    // Добавляем активный класс текущему элементу
+                    this.classList.add('active');
+                    
+                    // Скрываем все разделы
+                    document.querySelectorAll('.page-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Показываем выбранный раздел
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    document.getElementById(sectionId).classList.add('active');
+                });
+            });
+            
+            // Инициализация DataTables
+            $('#ordersTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json"
+                },
+                order: [[4, 'desc']]
+            });
+
+            $('#merchantTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json"
+                },
+                order: [[5, 'desc']]
+            });
+            
+            // Переключение сайдбара
+            document.getElementById('menu-toggle').addEventListener('click', function() {
+                document.getElementById('wrapper').classList.toggle('toggled');
+            });
+            
+            // Переключение полей для разных типов реквизитов
+            document.getElementById('detailTypeSelect').addEventListener('change', function() {
+                document.querySelectorAll('.detail-fields').forEach(fields => {
+                    fields.style.display = 'none';
+                });
+                
+                const type = this.value;
+                if (type === 'bank_account') {
+                    document.getElementById('bankAccountFields').style.display = 'block';
+                } else if (type === 'card') {
+                    document.getElementById('cardFields').style.display = 'block';
+                } else if (type === 'crypto') {
+                    document.getElementById('cryptoFields').style.display = 'block';
+                }
+            });
+            
+            // Кнопки для открытия модального окна новой заявки
+            document.getElementById('newOrderBtn').addEventListener('click', function() {
+                new bootstrap.Modal(document.getElementById('newOrderModal')).show();
+            });
+            
+            document.getElementById('newOrderBtn2').addEventListener('click', function() {
+                new bootstrap.Modal(document.getElementById('newOrderModal')).show();
+            });
+            
+            // Кнопки для открытия модального окна добавления реквизитов
+            document.getElementById('addDetailsBtn').addEventListener('click', function() {
+                document.getElementById('addDetailsForm').reset();
+                document.getElementById('addDetailsModal').querySelector('.modal-title').textContent = 'Добавить реквизиты';
+                if (document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]')) {
+                    document.getElementById('addDetailsForm').removeChild(document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]'));
+                }
+                new bootstrap.Modal(document.getElementById('addDetailsModal')).show();
+            });
+            
+            document.getElementById('addDetailsBtn2').addEventListener('click', function() {
+                document.getElementById('addDetailsForm').reset();
+                document.getElementById('addDetailsModal').querySelector('.modal-title').textContent = 'Добавить реквизиты';
+                if (document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]')) {
+                    document.getElementById('addDetailsForm').removeChild(document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]'));
+                }
+                new bootstrap.Modal(document.getElementById('addDetailsModal')).show();
+            });
+            
+            // Просмотр деталей заявки
+            document.querySelectorAll('.view-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    viewOrderDetails(orderId);
+                });
+            });
+
+            // Просмотр деталей транзакции мерчанта
+            document.querySelectorAll('.view-merchant-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const transactionId = this.getAttribute('data-transaction-id');
+                    try {
+                        const response = await fetch(`/api/trader/merchant-transactions/${transactionId}`);
+                        if (!response.ok) throw new Error('Ошибка загрузки данных');
+                        const transaction = await response.json();
+                        
+                        // Заполняем модальное окно
+                        document.getElementById('merchantDetailId').textContent = transaction.id;
+                        document.getElementById('merchantDetailAmount').textContent = `${transaction.amount.toFixed(2)} ₽`;
+                        document.getElementById('merchantDetailFee').textContent = `${(transaction.fee || 0).toFixed(2)} ₽`;
+                        document.getElementById('merchantDetailMethod').textContent = transaction.method;
+                        document.getElementById('merchantDetailStatus').textContent = 
+                            transaction.status === 'completed' ? 'Завершено' : 
+                            transaction.status === 'pending' ? 'В ожидании' : 'Ошибка';
+                        document.getElementById('merchantDetailCreated').textContent = 
+                            new Date(transaction.created_at).toLocaleString();
+                        document.getElementById('merchantDetailUpdated').textContent = 
+                            transaction.updated_at ? new Date(transaction.updated_at).toLocaleString() : 'Нет данных';
+                        
+                        // Показываем модальное окно
+                        new bootstrap.Modal(document.getElementById('merchantDetailsModal')).show();
+                    } catch (error) {
+                        console.error('Ошибка:', error);
+                        Swal.fire('Ошибка!', error.message, 'error');
+                    }
+                });
+            });
+            
+            // Подтверждение удаления реквизитов
+            document.querySelectorAll('.delete-detail-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const detailId = this.getAttribute('data-detail-id');
+                    document.getElementById('detailIdToDelete').value = detailId;
+                    new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+                });
+            });
+
+            document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+                const detailId = document.getElementById('detailIdToDelete').value;
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                
+                try {
+                    const response = await fetch(`/api/trader/details/${detailId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка удаления');
+                    }
+                    
+                    Swal.fire('Успех!', 'Реквизиты удалены', 'success').then(() => {
+                        location.reload();
+                    });
+                } catch (error) {
+                    Swal.fire('Ошибка!', error.message, 'error');
+                } finally {
+                    bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+                }
+            });
+            
+            // Редактирование реквизитов
+            document.querySelectorAll('.edit-detail-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const detailId = this.getAttribute('data-detail-id');
+                    editDetail(detailId);
+                });
+            });
+            
+            // Включение/выключение депозитов
+            document.getElementById('enableDepositBtn').addEventListener('click', function() {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                
+                fetch('/api/trader/deposits/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ enable: true })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка включения депозитов');
+                    return response.json();
+                })
+                .then(() => {
+                    Swal.fire('Успех!', 'Депозиты включены', 'success');
+                })
+                .catch(error => {
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+            
+            document.getElementById('disableDepositBtn').addEventListener('click', function() {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                
+                fetch('/api/trader/deposits/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ enable: false })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка выключения депозитов');
+                    return response.json();
+                })
+                .then(() => {
+                    Swal.fire('Успех!', 'Депозиты выключены', 'success');
+                })
+                .catch(error => {
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+            
+            // Отправка формы новой заявки
+            document.getElementById('newOrderForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    type: this.elements.type.value,
+                    amount: parseFloat(this.elements.amount.value),
+                    method: this.elements.method.value,
+                    details_id: this.elements.details_id.value
+                };
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                
+                fetch('/api/trader/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка создания заявки');
+                    return response.json();
+                })
+                .then(data => {
+                    Swal.fire('Успех!', 'Заявка создана', 'success').then(() => {
+                        location.reload();
+                    });
+                })
+                .catch(error => {
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+            
+            // Отправка формы добавления/редактирования реквизитов
+            document.getElementById('addDetailsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    type: this.elements.type.value,
+                    account_number: this.elements.account_number?.value,
+                    bik: this.elements.bik?.value,
+                    owner_name: this.elements.owner_name?.value,
+                    card_number: this.elements.card_number?.value,
+                    card_owner: this.elements.card_owner?.value,
+                    card_expiry: this.elements.card_expiry?.value,
+                    wallet_address: this.elements.wallet_address?.value,
+                    crypto_type: this.elements.crypto_type?.value
+                };
+                
+                const detailId = this.elements.detail_id?.value;
+                const method = detailId ? 'PUT' : 'POST';
+                const url = detailId ? `/api/trader/details/${detailId}` : '/api/trader/details';
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка сохранения реквизитов');
+                    return response.json();
+                })
+                .then(() => {
+                    Swal.fire('Успех!', 'Реквизиты сохранены', 'success').then(() => {
+                        location.reload();
+                    });
+                })
+                .catch(error => {
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+        });
+        
+        // Функция просмотра деталей заявки
+        function viewOrderDetails(orderId) {
+            fetch(`/api/trader/orders/${orderId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки данных');
+                return response.json();
+            })
+            .then(order => {
+                document.getElementById('orderDetailId').textContent = order.id;
+                document.getElementById('orderDetailType').textContent = order.type === 'deposit' ? 'Депозит' : 'Вывод';
+                document.getElementById('orderDetailAmount').textContent = order.amount.toFixed(2) + ' ₽';
+                document.getElementById('orderDetailMethod').textContent = order.method;
+                document.getElementById('orderDetailStatus').textContent = 
+                    order.status === 'completed' ? 'Завершено' : 
+                    order.status === 'pending' ? 'В ожидании' : 
+                    'Ошибка';
+                document.getElementById('orderDetailCreated').textContent = new Date(order.created_at).toLocaleString();
+                document.getElementById('orderDetailUpdated').textContent = order.updated_at ? 
+                    new Date(order.updated_at).toLocaleString() : 'Нет данных';
+                document.getElementById('orderDetailDetails').textContent = order.details || 'Нет данных';
+
+                // Показываем/скрываем кнопки действий в зависимости от статуса
+                const actionsDiv = document.getElementById('orderActions');
+                if (order.status === 'completed' || order.status === 'failed') {
+                    actionsDiv.style.display = 'none';
+                } else {
+                    actionsDiv.style.display = 'block';
+                    
+                    // Обновляем обработчики для кнопок
+                    document.getElementById('completeOrderBtn').onclick = () => {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                        
+                        fetch(`/api/trader/orders/${orderId}/complete`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Ошибка завершения заявки');
+                            return response.json();
+                        })
+                        .then(() => {
+                            Swal.fire('Успех!', 'Заявка завершена', 'success').then(() => {
+                                location.reload();
+                            });
+                        })
+                        .catch(error => {
+                            Swal.fire('Ошибка!', error.message, 'error');
+                        });
+                    };
+
+                    document.getElementById('cancelOrderBtn').onclick = () => {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                        
+                        fetch(`/api/trader/orders/${orderId}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Ошибка отмены заявки');
+                            return response.json();
+                        })
+                        .then(() => {
+                            Swal.fire('Успех!', 'Заявка отменена', 'success').then(() => {
+                                location.reload();
+                            });
+                        })
+                        .catch(error => {
+                            Swal.fire('Ошибка!', error.message, 'error');
+                        });
+                    };
+                }
+
+                new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+            })
+            .catch(error => {
+                Swal.fire('Ошибка!', error.message, 'error');
+            });
+        }
+
+        // Функция для редактирования реквизитов
+        function editDetail(detailId) {
+            fetch(`/api/trader/details/${detailId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки данных');
+                return response.json();
+            })
+            .then(detail => {
+                // Заполняем форму данными
+                const modal = document.getElementById('addDetailsModal');
+                const form = document.getElementById('addDetailsForm');
+                
+                // Сбрасываем форму
+                form.reset();
+                
+                // Устанавливаем тип
+                form.elements.type.value = detail.type;
+                
+                // Показываем соответствующие поля
+                document.querySelectorAll('.detail-fields').forEach(fields => {
+                    fields.style.display = 'none';
+                });
+                
+                if (detail.type === 'bank_account') {
+                    document.getElementById('bankAccountFields').style.display = 'block';
+                    // Парсим данные из строки
+                    const details = detail.details.split(', ');
+                    form.elements.account_number.value = details[0].replace('Счет: ', '');
+                    form.elements.bik.value = details[1].replace('БИК: ', '');
+                    form.elements.owner_name.value = details[2].replace('Владелец: ', '');
+                } else if (detail.type === 'card') {
+                    document.getElementById('cardFields').style.display = 'block';
+                    const details = detail.details.split(', ');
+                    form.elements.card_number.value = details[0].replace('Карта: ', '');
+                    form.elements.card_owner.value = details[1].replace('Владелец: ', '');
+                    form.elements.card_expiry.value = details[2].replace('Срок: ', '');
+                } else if (detail.type === 'crypto') {
+                    document.getElementById('cryptoFields').style.display = 'block';
+                    const details = detail.details.split(', ');
+                    form.elements.wallet_address.value = details[0].replace('Адрес: ', '');
+                    form.elements.crypto_type.value = details[1].replace('Тип: ', '');
+                }
+                
+                // Изменяем заголовок модального окна
+                modal.querySelector('.modal-title').textContent = 'Редактировать реквизиты';
+                
+                // Добавляем скрытое поле с ID реквизитов
+                if (!form.querySelector('input[name="detail_id"]')) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'detail_id';
+                    input.value = detailId;
+                    form.appendChild(input);
+                } else {
+                    form.querySelector('input[name="detail_id"]').value = detailId;
+                }
+                
+                // Показываем модальное окно
+                new bootstrap.Modal(modal).show();
+            })
+            .catch(error => {
+                Swal.fire('Ошибка!', error.message, 'error');
+            });
+        }
+    </script>
+</body>
+</html>
