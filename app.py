@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, url_for, make_response, Response
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 from database.database import JSONDatabase, TransactionRequisitesManager
 from database.init_db import init_db
 import json
@@ -270,21 +271,29 @@ def perform_matching():
             'default': 0.02
         }
 
-        # Получаем транзакции мерчантов
+        # Получаем все транзакции и фильтруем
+        all_transactions = db.find('transactions') or []
+        
         pending_deposits = [
-            tx for tx in db.find('transactions', {'status': 'pending', 'type': 'deposit'})
-            if tx and isinstance(tx, dict) and tx.get('requisites_approved')
+            tx for tx in all_transactions 
+            if isinstance(tx, dict) and 
+               tx.get('type') == 'deposit' and 
+               tx.get('status') == 'pending' and 
+               tx.get('merchant_id') is not None
         ]
+        
         pending_withdrawals = [
-            tx for tx in db.find('transactions', {'status': 'pending', 'type': 'withdrawal'})
-            if tx and isinstance(tx, dict) and tx.get('requisites_approved')
+            tx for tx in all_transactions 
+            if isinstance(tx, dict) and 
+               tx.get('type') == 'withdrawal' and 
+               tx.get('status') == 'pending' and 
+               tx.get('merchant_id') is not None
         ]
 
         # Конвертация в RUB
         for tx in pending_deposits + pending_withdrawals:
             tx['converted_amount'] = float(tx['amount']) * currency_rates.get(tx.get('currency', 'RUB'), 1)
 
-        # Сортировка
         pending_deposits.sort(key=lambda x: -x['converted_amount'])
         pending_withdrawals.sort(key=lambda x: x['converted_amount'])
 
@@ -318,6 +327,7 @@ def perform_matching():
                     'deposit_ids': [d['id'] for d in matched_deposits],
                     'withdrawal_id': withdrawal['id'],
                     'amount': withdrawal['amount'],
+                    'currency': withdrawal.get('currency', 'RUB'),
                     'commission': commission,
                     'status': 'pending',
                     'created_at': datetime.now().isoformat(),
@@ -1055,7 +1065,7 @@ def update_commissions():
 @csrf_protect
 @log_request
 @log_response
-def add_transaction_requisites(tx_id):
+def add_transaction_requisites_adm(tx_id):
     try:
         data = request.get_json()
         tx = db.find_one('transactions', {'id': int(tx_id)})
@@ -1356,15 +1366,72 @@ def get_matches():
 
 @app.route('/api/admin/matching/run', methods=['POST'])
 @role_required('admin')
-@log_request
-@log_response
 def run_matching():
-    matched_pairs = perform_matching()
-    return jsonify({
-        'success': True,
-        'matches_count': len(matched_pairs),
-        'matches': matched_pairs
-    })
+    try:
+        # Проверяем наличие CSRF токена
+        if not request.is_json:
+            return jsonify({'error': 'Request must be JSON'}), 400
+        
+        # Получаем все ожидающие депозиты и выводы мерчантов
+        pending_deposits = db.find('transactions', {
+            'type': 'deposit',
+            'status': 'pending',
+            'merchant_id': {'$exists': True}
+        }) or []
+        
+        pending_withdrawals = db.find('transactions', {
+            'type': 'withdrawal',
+            'status': 'pending',
+            'merchant_id': {'$exists': True}
+        }) or []
+        
+        # Простая логика матчинга - ищем депозиты и выводы с одинаковой суммой и валютой
+        matches = []
+        matched_deposit_ids = set()
+        matched_withdrawal_ids = set()
+        
+        for withdrawal in pending_withdrawals:
+            if withdrawal['id'] in matched_withdrawal_ids:
+                continue
+                
+            for deposit in pending_deposits:
+                if (deposit['id'] not in matched_deposit_ids and
+                    deposit['currency'] == withdrawal['currency'] and
+                    abs(deposit['amount'] - withdrawal['amount']) <= 0.01):  # Учитываем погрешность округления
+                    
+                    # Создаем запись о матчинге
+                    match_id = str(uuid.uuid4())
+                    matches.append({
+                        'id': match_id,
+                        'deposit_ids': [deposit['id']],
+                        'withdrawal_id': withdrawal['id'],
+                        'amount': withdrawal['amount'],
+                        'currency': withdrawal['currency'],
+                        'commission': 0.01,  # 1% комиссия по умолчанию
+                        'status': 'pending',
+                        'created_at': datetime.utcnow()
+                    })
+                    
+                    matched_deposit_ids.add(deposit['id'])
+                    matched_withdrawal_ids.add(withdrawal['id'])
+                    break
+        
+        # Сохраняем найденные совпадения в базу
+        if matches:
+            db.insert_many('matches', matches)
+        
+        return jsonify({
+            'success': True,
+            'matches_count': len(matches),
+            'matches': matches
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running matching: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/admin/transactions/pending', methods=['GET'])
 @role_required('admin')
@@ -1392,27 +1459,26 @@ def get_pending_transactions():
 @role_required('admin')
 def get_matching_transactions():
     try:
-        # Получаем ожидающие депозиты (транзакции мерчантов)
+        # Получаем все транзакции и фильтруем на Python-стороне
+        all_transactions = db.find('transactions') or []
+        
         pending_deposits = [
-            tx for tx in db.find('transactions', {
-                'type': 'deposit',
-                'status': 'pending',
-                'merchant_id': {'$exists': True}
-            }) or []
-            if isinstance(tx, dict)
+            tx for tx in all_transactions 
+            if isinstance(tx, dict) and 
+               tx.get('type') == 'deposit' and 
+               tx.get('status') == 'pending' and 
+               tx.get('merchant_id') is not None
         ]
         
-        # Получаем ожидающие выводы (транзакции мерчантов)
         pending_withdrawals = [
-            tx for tx in db.find('transactions', {
-                'type': 'withdrawal',
-                'status': 'pending',
-                'merchant_id': {'$exists': True}
-            }) or []
-            if isinstance(tx, dict)
+            tx for tx in all_transactions 
+            if isinstance(tx, dict) and 
+               tx.get('type') == 'withdrawal' and 
+               tx.get('status') == 'pending' and 
+               tx.get('merchant_id') is not None
         ]
         
-        # Добавляем email мерчанта, если есть
+        # Добавляем email мерчанта
         for tx in pending_deposits + pending_withdrawals:
             merchant = db.find_one('users', {'id': tx.get('merchant_id')})
             if merchant:
@@ -1723,6 +1789,16 @@ def cancel_trader_order(order_id):
         }
         db.update_one('orders', {'id': int(order_id)}, updates)
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/trader/details', methods=['GET'])
+@role_required('trader')
+def get_trader_details():
+    user = get_current_user()
+    try:
+        details = db.find('details', {'trader_id': int(user['id'])})
+        return jsonify([d for d in details if isinstance(d, dict)])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2087,82 +2163,82 @@ def get_transaction_details(transaction_id):
         print(f"Error getting transaction {transaction_id}: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/trader/transactions/<int:transaction_id>/requisites', methods=['POST'])
+@app.route('/api/trader/transactions/<int:tx_id>/requisites', methods=['POST'])
 @role_required('trader')
-def add_requisites(transaction_id):
-    try:
-        data = request.get_json()
-        if not data.get('requisites_id'):
-            return jsonify({'error': 'Requisites ID is required'}), 400
+@csrf_protect
+def assign_requisites_to_transaction_tr(tx_id):
+    user = get_current_user()
+    data = request.get_json()
+    
+    if not data or not data.get('requisites_id'):
+        return jsonify({'error': 'Requisites ID is required'}), 400
+    
+    # Проверяем что реквизиты принадлежат трейдеру
+    detail = db.find_one('details', {
+        'id': int(data['requisites_id']),
+        'trader_id': int(user['id'])
+    })
+    if not detail:
+        return jsonify({'error': 'Requisites not found or access denied'}), 404
+    
+    db.update_one('transactions', {'id': int(tx_id)}, {
+        'requisites_id': int(data['requisites_id']),
+        'updated_at': datetime.now().isoformat()
+    })
+    
+    return jsonify({'success': True})
 
-        # Обновляем транзакцию
-        result = db.update('transactions', 
-            {'id': transaction_id, 'trader_id': get_current_user()['id']},
-            {'$set': {
-                'requisites_id': data['requisites_id'],
-                'updated_at': datetime.utcnow()
-            }}
-        )
-        
-        if not result:
-            return jsonify({'error': 'Transaction not found or update failed'}), 404
-            
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
-
-@app.route('/api/trader/transactions/<int:transaction_id>/receipt', methods=['POST'])
+@app.route('/api/trader/transactions/<int:tx_id>/receipt', methods=['POST'])
 @role_required('trader')
-def upload_receipt(transaction_id):
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file uploaded'}), 400
-            
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No selected file'}), 400
-            
-        # Сохраняем файл
-        filename = secure_filename(f"receipt_{transaction_id}_{datetime.now().timestamp()}.{file.filename.split('.')[-1]}")
-        file.save(os.path.join('uploads', filename))
+@csrf_protect
+def upload_transaction_receipt_tr(tx_id):
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(f"receipt_{tx_id}_{datetime.now().timestamp()}.{file.filename.rsplit('.', 1)[1].lower()}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         
-        # Обновляем транзакцию
-        db.update('transactions',
-            {'id': transaction_id},
-            {'$set': {
-                'receipt_file': filename,
-                'updated_at': datetime.utcnow()
-            }}
-        )
+        db.update_one('transactions', {'id': int(tx_id)}, {
+            'receipt_file': filename,
+            'updated_at': datetime.now().isoformat()
+        })
         
         return jsonify({'success': True, 'filename': filename})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    
+    return jsonify({'error': 'Invalid file type'}), 400
 
 
-@app.route('/api/trader/transactions/<int:transaction_id>/complete', methods=['POST'])
+@app.route('/api/trader/transactions/<int:tx_id>/complete', methods=['POST'])
 @role_required('trader')
-def complete_transaction(transaction_id):
+@csrf_protect
+def trader_complete_transaction_tr(tx_id):
+    user = get_current_user()
     try:
-        # Проверяем, что есть реквизиты или чек для выводов
-        transaction = db.find_one('transactions', {'id': transaction_id})
-        if transaction['type'] == 'withdrawal' and not transaction.get('requisites_id'):
-            return jsonify({'error': 'Не назначены реквизиты для вывода'}), 400
-
-        # Обновляем статус
-        result = db.update('transactions',
-            {'id': transaction_id, 'trader_id': get_current_user()['id']},
-            {'$set': {
-                'status': 'completed',
-                'completed_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow()
-            }}
-        )
+        transaction = db.find_one('transactions', {
+            'id': int(tx_id),
+            'trader_id': int(user['id'])
+        })
         
-        if not result:
-            return jsonify({'error': 'Transaction not found or update failed'}), 404
-            
+        if not transaction:
+            return jsonify({'error': 'Transaction not found or access denied'}), 404
+        
+        # Для выводов проверяем наличие реквизитов
+        if transaction.get('type') == 'withdrawal' and not transaction.get('requisites_id'):
+            return jsonify({'error': 'Requisites are required for withdrawals'}), 400
+        
+        updates = {
+            'status': 'pending_admin_approval',
+            'completed_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        db.update_one('transactions', {'id': int(tx_id)}, updates)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
