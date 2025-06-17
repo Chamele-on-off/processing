@@ -1,0 +1,36 @@
+{% extends "admin.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <h1><i class="fas fa-user-plus me-2"></i>Создать пользователя</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" class="form-control" name="password" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Роль</label>
+                    <select class="form-select" name="role" required>
+                        <option value="admin">Администратор</option>
+                        <option value="trader">Трейдер</option>
+                        <option value="merchant">Мерчант</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Создать</button>
+                <a href="/admin.html" class="btn btn-secondary">Отмена</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

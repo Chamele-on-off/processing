@@ -1,0 +1,86 @@
+<div class="balance-content">
+    <h1 class="mb-4"><i class="fas fa-wallet me-2"></i> Баланс платформы</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h6 class="card-title text-primary">Общий баланс</h6>
+                    <h3>{{ "%.2f"|format(total_balance) }} ₽</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h6 class="card-title text-success">Доступно для выплат</h6>
+                    <h3>{{ "%.2f"|format(available_balance) }} ₽</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="m-0 font-weight-bold">Распределение средств</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Тип</th>
+                            <th>Сумма</th>
+                            <th>Процент</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in distribution %}
+                        <tr>
+                            <td>{{ item.type }}</td>
+                            <td>{{ "%.2f"|format(item.amount) }} ₽</td>
+                            <td>{{ item.percentage }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h6 class="m-0 font-weight-bold">Балансы пользователей</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Роль</th>
+                            <th>Баланс</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_balances %}
+                        <tr>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'primary' if user.role == 'admin' 
+                                    else 'success' if user.role == 'trader' 
+                                    else 'warning' 
+                                }}">
+                                    {{ user.role }}
+                                </span>
+                            </td>
+                            <td>{{ "%.2f"|format(user.balance) }} ₽</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
