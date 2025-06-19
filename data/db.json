@@ -1,0 +1,429 @@
+{
+  "users": [
+    {
+      "email": "admin@example.com",
+      "password_hash": "pbkdf2:sha256:600000$uIGxoLXF2imcmUw9$6b8f8846c80954fc6d4d0fe263856aa7a14cfb35b90298cbd06a80f6e01f7542",
+      "role": "admin",
+      "is_active": true,
+      "verified": true,
+      "created_at": "2025-06-17T03:58:48.604958",
+      "balance": 10000.0,
+      "insurance_deposit": 0.0,
+      "id": 1
+    },
+    {
+      "email": "merchant@example.com",
+      "password_hash": "pbkdf2:sha256:600000$haY0QNo2Wrqdn2p5$3c619df901b08102284bbf69d1646cdb38f0d82c7e19795c8380fff5f42852b6",
+      "role": "merchant",
+      "is_active": true,
+      "verified": true,
+      "created_at": "2025-06-17T03:58:48.727036",
+      "balance": 5000.0,
+      "insurance_deposit": 1000.0,
+      "merchant_id": "merch_12345",
+      "api_key": "test_api_key_123",
+      "id": 2
+    },
+    {
+      "email": "trader@example.com",
+      "password_hash": "pbkdf2:sha256:600000$gnND0ZacnQoF9Tol$afbbc2749838954fd95e43294488f8c6d255cddea20463a6a3babdb7239506de",
+      "role": "trader",
+      "is_active": true,
+      "verified": true,
+      "created_at": "2025-06-17T03:58:48.846933",
+      "balance": 12000.0,
+      "insurance_deposit": 500.0,
+      "payment_methods": [
+        "bank_transfer",
+        "crypto"
+      ],
+      "id": 3,
+      "updated_at": "2025-06-17T04:02:37.983655"
+    }
+  ],
+  "transactions": [
+    {
+      "user_id": 2,
+      "amount": 1000,
+      "currency": "USD",
+      "type": "deposit",
+      "status": "completed",
+      "created_at": "2025-06-17T03:58:48.849364",
+      "id": 1
+    },
+    {
+      "user_id": 3,
+      "amount": 0.05,
+      "currency": "BTC",
+      "type": "withdrawal",
+      "status": "in_progress",
+      "created_at": "2025-06-17T03:58:48.849771",
+      "id": 2,
+      "trader_id": 3,
+      "taken_at": "2025-06-17T04:00:59.373390",
+      "updated_at": "2025-06-17T14:42:39.317775",
+      "requisites_id": 1,
+      "receipt_file": "receipt_2_1750171126.077015.pdf"
+    },
+    {
+      "id": 3,
+      "user_id": 3,
+      "user_email": "trader@example.com",
+      "type": "deposit",
+      "amount": 10000.0,
+      "method": "bank_account",
+      "status": "completed",
+      "created_at": "2025-06-17T04:02:37.986060",
+      "completed_at": "2025-06-17T04:02:37.985994",
+      "source": "trader_order",
+      "new_balance": 12000.0
+    },
+    {
+      "id": 4,
+      "user_id": 1,
+      "user_email": "admin@example.com",
+      "type": "withdrawal",
+      "amount": 20.0,
+      "status": "completed",
+      "created_at": "2025-06-17T04:03:11.318718",
+      "admin_id": 1,
+      "completed_at": "2025-06-17T04:03:19.938620",
+      "completed_by": 1,
+      "updated_at": "2025-06-17T04:03:19.938670"
+    },
+    {
+      "id": 5,
+      "user_id": 1,
+      "user_email": "admin@example.com",
+      "type": "deposit",
+      "amount": 200.0,
+      "status": "completed",
+      "created_at": "2025-06-17T04:03:25.873753",
+      "admin_id": 1,
+      "completed_at": "2025-06-17T04:03:31.250182",
+      "completed_by": 1,
+      "updated_at": "2025-06-17T04:03:31.250213"
+    },
+    {
+      "id": 6,
+      "merchant_id": 2,
+      "type": "deposit",
+      "amount": 2000.0,
+      "method": "bank",
+      "status": "in_progress",
+      "created_at": "2025-06-17T04:25:20.177700",
+      "updated_at": "2025-06-17T04:31:52.528231",
+      "trader_id": 3,
+      "taken_at": "2025-06-17T04:31:52.528222"
+    },
+    {
+      "id": 7,
+      "merchant_id": 2,
+      "type": "deposit",
+      "amount": 1000.0,
+      "method": "bank",
+      "status": "pending",
+      "created_at": "2025-06-17T04:25:25.913347",
+      "updated_at": "2025-06-17T04:25:25.913322"
+    },
+    {
+      "id": 8,
+      "merchant_id": 2,
+      "type": "withdrawal",
+      "amount": 2000.0,
+      "method": "bank",
+      "status": "pending",
+      "created_at": "2025-06-17T04:25:35.432635",
+      "updated_at": "2025-06-17T04:25:35.432613"
+    },
+    {
+      "id": 9,
+      "merchant_id": 2,
+      "type": "deposit",
+      "amount": 1000.0,
+      "method": "bank",
+      "status": "pending",
+      "created_at": "2025-06-17T04:25:40.632694",
+      "updated_at": "2025-06-17T04:25:40.632674"
+    },
+    {
+      "id": 10,
+      "merchant_id": 2,
+      "type": "withdrawal",
+      "amount": 1000.0,
+      "method": "bank",
+      "status": "pending",
+      "created_at": "2025-06-17T04:25:48.038846",
+      "updated_at": "2025-06-17T04:25:48.038832"
+    }
+  ],
+  "requisites": [],
+  "disputes": [],
+  "audit_logs": [],
+  "settings": {
+    "system_name": "Crypto-Fiat Processing",
+    "default_currency": "USD",
+    "transaction_fee": 0.02,
+    "min_amount": 10,
+    "max_amount": 1000000,
+    "crypto_currencies": [
+      "BTC",
+      "ETH",
+      "USDT"
+    ],
+    "fiat_currencies": [
+      "USD",
+      "EUR",
+      "GBP"
+    ],
+    "created_at": "2025-06-17T03:58:48.847543",
+    "updated_at": "2025-06-17T03:58:48.847546"
+  },
+  "triangle_transactions": [
+    {
+      "deposit_ids": [
+        1,
+        2
+      ],
+      "payout_id": 3,
+      "amount": 1500,
+      "status": "completed",
+      "created_at": "2025-06-17T03:58:48.850072",
+      "id": 1
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "trader_id": 3,
+      "type": "deposit",
+      "amount": 10000.0,
+      "method": "bank_account",
+      "details_id": 1,
+      "status": "completed",
+      "created_at": "2025-06-17T04:01:30.049208",
+      "updated_at": "2025-06-17T04:02:37.978942",
+      "completed_at": "2025-06-17T04:02:37.978920"
+    }
+  ],
+  "details": [
+    {
+      "id": 1,
+      "trader_id": 3,
+      "type": "bank_account",
+      "details": "Счет: , БИК: , Владелец: ",
+      "status": "active",
+      "created_at": "2025-06-17T04:01:15.457381",
+      "approved_at": "2025-06-17T04:02:27.426094",
+      "approved_by": 1,
+      "updated_at": "2025-06-17T04:02:27.426155"
+    }
+  ],
+  "transaction_requisites": [
+    {
+      "transaction_id": 10,
+      "type": "bank",
+      "bank_name": "еуые",
+      "bik": "1223",
+      "account_number": "еуые",
+      "account_holder": "еуые",
+      "created_at": "2025-06-17T04:30:31.444307",
+      "id": 1
+    },
+    {
+      "transaction_id": 8,
+      "type": "crypto",
+      "bank_name": null,
+      "bik": null,
+      "account_number": null,
+      "account_holder": null,
+      "created_at": "2025-06-17T04:31:02.152398",
+      "id": 2
+    },
+    {
+      "transaction_id": 7,
+      "type": "crypto",
+      "bank_name": null,
+      "bik": null,
+      "account_number": null,
+      "account_holder": null,
+      "created_at": "2025-06-17T04:31:09.067530",
+      "id": 3
+    },
+    {
+      "transaction_id": 6,
+      "type": "crypto",
+      "bank_name": null,
+      "bik": null,
+      "account_number": null,
+      "account_holder": null,
+      "created_at": "2025-06-17T04:31:15.550900",
+      "id": 4
+    }
+  ],
+  "system_settings": [
+    {
+      "type": "currency_rates",
+      "USD": 75.0,
+      "EUR": 85.0,
+      "GBP": 95.0,
+      "USDT": 1.0,
+      "BTC": 30000.0,
+      "ETH": 2000.0,
+      "updated_at": "2025-06-17T03:58:48.847547",
+      "auto_update": true,
+      "source": "internal",
+      "id": 1,
+      "created_at": "2025-06-17T03:58:48.847556"
+    },
+    {
+      "type": "commissions",
+      "default": 0.02,
+      "per_merchant": {
+        "merch_12345": 0.015
+      },
+      "min_commission": 0.01,
+      "max_commission": 0.05,
+      "updated_at": "2025-06-17T03:58:48.847807",
+      "id": 2,
+      "created_at": "2025-06-17T03:58:48.847815"
+    },
+    {
+      "type": "matching",
+      "auto_matching": true,
+      "min_amount": 10.0,
+      "max_amount": 100000.0,
+      "currency_tolerance": 0.05,
+      "time_window": 3600,
+      "updated_at": "2025-06-17T03:58:48.848012",
+      "id": 3,
+      "created_at": "2025-06-17T03:58:48.848019"
+    }
+  ],
+  "deposit_requests": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "amount": 1000.0,
+      "currency": "USD",
+      "payment_method": "bank",
+      "requisites": {
+        "account_number": "1234567890",
+        "bank_name": "Test Bank",
+        "bik": "123456789",
+        "owner_name": "Test Merchant"
+      },
+      "status": "pending",
+      "created_at": "2025-06-17T03:58:48.848535"
+    }
+  ],
+  "withdrawal_requests": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "amount": 500.0,
+      "currency": "USD",
+      "withdrawal_method": "bank",
+      "requisites": {
+        "account_number": "9876543210",
+        "bank_name": "Test Bank",
+        "bik": "987654321",
+        "owner_name": "Test Merchant"
+      },
+      "status": "pending",
+      "created_at": "2025-06-17T03:58:48.848941"
+    }
+  ],
+  "requisites_types": [
+    {
+      "types": [
+        {
+          "id": 1,
+          "name": "Банковский счет",
+          "fields": [
+            {
+              "name": "account_number",
+              "label": "Номер счета",
+              "type": "text"
+            },
+            {
+              "name": "bank_name",
+              "label": "Банк",
+              "type": "text"
+            },
+            {
+              "name": "bik",
+              "label": "БИК",
+              "type": "text"
+            },
+            {
+              "name": "owner_name",
+              "label": "Владелец",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Банковская карта",
+          "fields": [
+            {
+              "name": "card_number",
+              "label": "Номер карты",
+              "type": "text"
+            },
+            {
+              "name": "card_holder",
+              "label": "Держатель",
+              "type": "text"
+            },
+            {
+              "name": "expiry_date",
+              "label": "Срок действия",
+              "type": "text"
+            },
+            {
+              "name": "cvv",
+              "label": "CVV",
+              "type": "password"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Криптокошелек",
+          "fields": [
+            {
+              "name": "wallet_address",
+              "label": "Адрес",
+              "type": "text"
+            },
+            {
+              "name": "currency",
+              "label": "Валюта",
+              "type": "select",
+              "options": [
+                "BTC",
+                "ETH",
+                "USDT",
+                "OTHER"
+              ]
+            }
+          ]
+        }
+      ],
+      "id": 1,
+      "created_at": "2025-06-17T03:58:48.848240"
+    }
+  ],
+  "api_keys": [
+    {
+      "id": 1,
+      "merchant_id": 2,
+      "key": "5d1c494fabb5d0882a2206d4da5ecd5f",
+      "secret": "a65cfde99aec7ee4e8dddb6373b62d94b9f91e7303f7687198169d445bfa6acf",
+      "created_at": "2025-06-17T04:25:56.910953",
+      "active": true
+    }
+  ]
+}
