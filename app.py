@@ -15,9 +15,22 @@ import secrets
 from services.matching_service import MatchingService
 import time
 import threading
-from threading import Lock
+from contextlib import contextmanager
 
-db_lock = Lock()
+# Глобальная блокировка для операций с БД
+db_operation_lock = Lock()
+
+@contextmanager
+def db_transaction(db):
+    """Контекстный менеджер для безопасных операций с БД"""
+    with db_operation_lock:
+        try:
+            yield db
+            db.save()  # Сохраняем только один раз в конце
+        except Exception as e:
+            logger.error(f"Database transaction failed: {str(e)}")
+            raise
+
 
 
 # Настройка логгирования
@@ -1798,65 +1811,74 @@ def platform_requisites():
         logger.error(f"Error processing platform requisites: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/admin/transactions/<tx_id>/approve', methods=['POST'])
+@app.route('/api/admin/transactions/<int:tx_id>/approve', methods=['POST'])
 @role_required('admin')
 @csrf_protect
 def approve_transaction(tx_id):
     try:
-        with db_lock:
-            # Преобразуем ID в int
+        # Проверяем и преобразуем ID
+        try:
             tx_id_int = int(tx_id)
-            
-            transaction = db.find_one('transactions', {'id': tx_id_int})
+        except ValueError:
+            return jsonify({'error': 'Invalid transaction ID format'}), 400
+
+        with db_transaction(db) as safe_db:
+            # 1. Получаем транзакцию
+            transaction = safe_db.find_one('transactions', {'id': tx_id_int})
             if not transaction:
-                logger.error(f"Transaction {tx_id_int} not found")
                 return jsonify({'error': 'Transaction not found'}), 404
 
-            current_status = transaction.get('status')
-            if current_status not in ['pending', 'pending_admin_approval']:
-                logger.error(f"Transaction {tx_id_int} has invalid status: {current_status}")
-                return jsonify({'error': f'Transaction is not pending approval (current status: {current_status})'}), 400
+            # 2. Проверяем статус
+            valid_statuses = ['pending', 'pending_admin_approval']
+            if transaction.get('status') not in valid_statuses:
+                return jsonify({
+                    'error': f'Transaction must be in {valid_statuses}',
+                    'current_status': transaction.get('status')
+                }), 400
 
-            # Обновляем транзакцию
+            # 3. Подготавливаем обновления
             updates = {
                 'status': 'completed',
                 'completed_at': datetime.now().isoformat(),
                 'approved_at': datetime.now().isoformat(),
                 'approved_by': session['user_id']
             }
-            
-            db.update_one('transactions', {'id': tx_id_int}, updates)
 
-            # Для депозитов обновляем баланс пользователя
-            if transaction.get('type') == 'deposit' and 'user_id' in transaction:
-                user_id = int(transaction['user_id'])
-                user = db.find_one('users', {'id': user_id})
-                if not user:
-                    logger.error(f"User {user_id} not found for transaction {tx_id_int}")
-                    return jsonify({'error': 'User not found'}), 404
-                    
-                current_balance = float(user.get('balance', 0))
-                deposit_amount = float(transaction.get('amount', 0))
-                new_balance = current_balance + deposit_amount
-                
-                logger.info(f"Updating user {user_id} balance: {current_balance} + {deposit_amount} = {new_balance}")
-                db.update_one('users', {'id': user_id}, {'balance': new_balance})
+            # 4. Для депозитов - обновляем баланс
+            if transaction.get('type') == 'deposit':
+                user_id = transaction.get('user_id')
+                if user_id:
+                    try:
+                        user_id_int = int(user_id)
+                        user = safe_db.find_one('users', {'id': user_id_int})
+                        if not user:
+                            raise ValueError(f"User {user_id_int} not found")
 
-            # Сохраняем изменения
-            db.save()
-            
-            logger.info(f"Transaction {tx_id_int} approved successfully")
-            return jsonify({
-                'success': True, 
-                'new_status': 'completed',
-                'message': 'Transaction approved successfully'
-            })
+                        current_balance = float(user.get('balance', 0))
+                        amount = float(transaction.get('amount', 0))
+                        new_balance = current_balance + amount
+
+                        # Обновляем пользователя
+                        safe_db.update_one('users', {'id': user_id_int}, {
+                            'balance': new_balance
+                        })
+                    except (ValueError, TypeError) as e:
+                        logger.error(f"Balance update error: {str(e)}")
+                        raise ValueError("Invalid user or amount data")
+
+            # 5. Обновляем транзакцию
+            safe_db.update_one('transactions', {'id': tx_id_int}, updates)
+
+        return jsonify({
+            'success': True,
+            'message': 'Transaction approved',
+            'new_status': 'completed'
+        })
 
     except ValueError as e:
-        logger.error(f"Invalid transaction ID format: {tx_id} - {str(e)}")
-        return jsonify({'error': 'Invalid transaction ID format'}), 400
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        logger.error(f"Error approving transaction {tx_id}: {str(e)}", exc_info=True)
+        logger.error(f"Transaction approval error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 # Эндпоинт для подтверждения матчинга
