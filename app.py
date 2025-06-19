@@ -15,22 +15,6 @@ import secrets
 from services.matching_service import MatchingService
 import time
 import threading
-from contextlib import contextmanager
-
-# Глобальная блокировка для операций с БД
-db_operation_lock = Lock()
-
-@contextmanager
-def db_transaction(db):
-    """Контекстный менеджер для безопасных операций с БД"""
-    with db_operation_lock:
-        try:
-            yield db
-            db.save()  # Сохраняем только один раз в конце
-        except Exception as e:
-            logger.error(f"Database transaction failed: {str(e)}")
-            raise
-
 
 
 # Настройка логгирования
@@ -276,12 +260,6 @@ def start_auto_matching():
     
     thread = threading.Thread(target=matching_loop, daemon=True)
     thread.start()
-
-def log_transactions(transactions, title):
-    logger.info(f"----- {title} -----")
-    for tx in transactions:
-        logger.info(f"ID: {tx.get('id')}, Amount: {tx.get('amount')}, Currency: {tx.get('currency')}, Merchant: {tx.get('merchant_id')}")
-    logger.info("-------------------")
 
 def perform_matching():
     try:
@@ -1445,36 +1423,26 @@ def run_matching():
         logger.error(f"Error running matching: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/admin/pending-transactions')
+@app.route('/api/admin/transactions/pending', methods=['GET'])
 @role_required('admin')
 def get_pending_transactions():
     try:
-        # Включаем оба статуса - pending и pending_admin_approval
-        transactions = db.find('transactions', {
-            'status': {'$in': ['pending', 'pending_admin_approval']}
+        # Получаем ожидающие транзакции из коллекции transactions
+        deposits = [
+            tx for tx in (db.find('transactions', {'type': 'deposit', 'status': 'pending'}) or [])
+            if isinstance(tx, dict) and tx.get('requisites_approved')
+        ]
+        
+        withdrawals = [
+            tx for tx in (db.find('transactions', {'type': 'withdrawal', 'status': 'pending'}) or [])
+            if isinstance(tx, dict) and tx.get('requisites_approved')
+        ]
+        
+        return jsonify({
+            'deposits': deposits,
+            'withdrawals': withdrawals
         })
-        
-        result = []
-        for tx in transactions:
-            user_email = 'Unknown'
-            if 'user_id' in tx:
-                user = db.find_one('users', {'id': tx['user_id']})
-                user_email = user.get('email', 'Unknown') if user else 'Unknown'
-                
-            result.append({
-                'id': tx.get('id'),
-                'user_email': user_email,
-                'type': tx.get('type'),
-                'amount': float(tx.get('amount', 0)),
-                'currency': tx.get('currency', 'RUB'),
-                'status': tx.get('status'),
-                'created_at': tx.get('created_at'),
-                'method': tx.get('method')
-            })
-        
-        return jsonify(result)
     except Exception as e:
-        logger.error(f"Error getting pending transactions: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/matching/transactions', methods=['GET'])
@@ -1543,27 +1511,16 @@ def confirm_match(match_id):
                 'status': 'completed',
                 'completed_at': datetime.now().isoformat()
             })
-            db.save()
         
         db.update_one('transactions', {'id': match['withdrawal_id']}, {
             'status': 'completed',
             'completed_at': datetime.now().isoformat()
         })
-        db.save()
         
         return jsonify({'success': True})
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@app.route('/api/admin/merchant-deposits')
-@role_required('admin')
-def get_merchant_deposits():
-    deposits = db.find('transactions', {
-        'type': 'deposit', 
-        'merchant_id': {'$exists': True}
-    }) or []
-    return jsonify(deposits)
 
 @app.route('/api/admin/settings')
 @role_required('admin')
@@ -1595,7 +1552,6 @@ def update_settings():
     }
     
     db.update_one('system_settings', {'type': 'platform_settings'}, updates)
-    db.save()
     return jsonify({'success': True})
 
 
@@ -1726,197 +1682,6 @@ def reject_trader_withdrawal(withdrawal_id):
     
     except Exception as e:
         logger.error(f"Error rejecting trader withdrawal: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/admin/transactions/<int:tx_id>/details')
-@role_required('admin')
-def get_transaction_details_adm(tx_id):
-    try:
-        transaction = db.find_one('transactions', {'id': tx_id})
-        if not transaction:
-            return jsonify({'error': 'Transaction not found'}), 404
-            
-        # Проверяем наличие обязательных полей и устанавливаем значения по умолчанию
-        user_email = 'Unknown'
-        if 'user_id' in transaction:
-            user = db.find_one('users', {'id': transaction['user_id']})
-            if user:
-                user_email = user.get('email', 'Unknown')
-        
-        response = {
-            'id': transaction.get('id', 0),
-            'type': transaction.get('type', 'unknown'),
-            'amount': float(transaction.get('amount', 0)),
-            'currency': transaction.get('currency', 'RUB'),
-            'status': transaction.get('status', 'pending'),
-            'created_at': transaction.get('created_at'),
-            'completed_at': transaction.get('completed_at'),
-            'user_email': user_email,
-            'method': transaction.get('method'),
-            'requisites': transaction.get('requisites', {}),
-            'receipt_file': transaction.get('receipt_file'),
-            'receipt_uploaded_at': transaction.get('receipt_uploaded_at')
-        }
-        
-        return jsonify(response)
-    except Exception as e:
-        logger.error(f"Error getting transaction details: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
-            
-
-# Эндпоинт для работы с реквизитами платформы
-@app.route('/api/admin/platform-requisites', methods=['GET', 'POST'])
-@role_required('admin')
-def platform_requisites():
-    try:
-        if request.method == 'GET':
-            requisites = db.find_one('platform_settings', {'key': 'requisites'})
-            if not requisites:
-                # Возвращаем дефолтные значения, если реквизитов нет
-                return jsonify({
-                    'bank_details': '',
-                    'crypto_wallets': '',
-                    'other_methods': ''
-                })
-            return jsonify(requisites.get('value', {}))
-            
-        elif request.method == 'POST':
-            data = request.json
-            
-            # Проверяем существование записи
-            existing = db.find_one('platform_settings', {'key': 'requisites'})
-            
-            requisites_data = {
-                'key': 'requisites',
-                'value': {
-                    'bank_details': data.get('bank_details', ''),
-                    'crypto_wallets': data.get('crypto_wallets', ''),
-                    'other_methods': data.get('other_methods', '')
-                },
-                'updated_at': datetime.now().isoformat()
-            }
-            
-            if existing:
-                # Обновляем существующую запись
-                db.update('platform_settings', {'key': 'requisites'}, requisites_data)
-            else:
-                # Создаем новую запись
-                requisites_data['created_at'] = datetime.now().isoformat()
-                db.insert('platform_settings', requisites_data)
-                
-            return jsonify({'success': True})
-            
-    except Exception as e:
-        logger.error(f"Error processing platform requisites: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/admin/transactions/<int:tx_id>/approve', methods=['POST'])
-@role_required('admin')
-@csrf_protect
-def approve_transaction(tx_id):
-    try:
-        # Проверяем и преобразуем ID
-        try:
-            tx_id_int = int(tx_id)
-        except ValueError:
-            return jsonify({'error': 'Invalid transaction ID format'}), 400
-
-        with db_transaction(db) as safe_db:
-            # 1. Получаем транзакцию
-            transaction = safe_db.find_one('transactions', {'id': tx_id_int})
-            if not transaction:
-                return jsonify({'error': 'Transaction not found'}), 404
-
-            # 2. Проверяем статус
-            valid_statuses = ['pending', 'pending_admin_approval']
-            if transaction.get('status') not in valid_statuses:
-                return jsonify({
-                    'error': f'Transaction must be in {valid_statuses}',
-                    'current_status': transaction.get('status')
-                }), 400
-
-            # 3. Подготавливаем обновления
-            updates = {
-                'status': 'completed',
-                'completed_at': datetime.now().isoformat(),
-                'approved_at': datetime.now().isoformat(),
-                'approved_by': session['user_id']
-            }
-
-            # 4. Для депозитов - обновляем баланс
-            if transaction.get('type') == 'deposit':
-                user_id = transaction.get('user_id')
-                if user_id:
-                    try:
-                        user_id_int = int(user_id)
-                        user = safe_db.find_one('users', {'id': user_id_int})
-                        if not user:
-                            raise ValueError(f"User {user_id_int} not found")
-
-                        current_balance = float(user.get('balance', 0))
-                        amount = float(transaction.get('amount', 0))
-                        new_balance = current_balance + amount
-
-                        # Обновляем пользователя
-                        safe_db.update_one('users', {'id': user_id_int}, {
-                            'balance': new_balance
-                        })
-                    except (ValueError, TypeError) as e:
-                        logger.error(f"Balance update error: {str(e)}")
-                        raise ValueError("Invalid user or amount data")
-
-            # 5. Обновляем транзакцию
-            safe_db.update_one('transactions', {'id': tx_id_int}, updates)
-
-        return jsonify({
-            'success': True,
-            'message': 'Transaction approved',
-            'new_status': 'completed'
-        })
-
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Transaction approval error: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Internal server error'}), 500
-
-# Эндпоинт для подтверждения матчинга
-@app.route('/api/admin/matches/<int:match_id>/confirm', methods=['POST'])
-@role_required('admin')
-def confirm_match_adm(match_id):
-    try:
-        match = db.find_one('matches', {'id': match_id})
-        if not match:
-            return jsonify({'error': 'Match not found'}), 404
-            
-        if match['status'] != 'pending':
-            return jsonify({'error': 'Match is not pending confirmation'}), 400
-            
-        # Обновляем статус матча
-        db.update_one('matches', {'id': match_id}, {'status': 'completed'})
-        
-        # Обновляем связанные транзакции
-        deposit_ids = match.get('deposit_ids', [])
-        if isinstance(deposit_ids, str):
-            deposit_ids = [int(id) for id in deposit_ids.split(',') if id.strip()]
-            
-        for deposit_id in deposit_ids:
-            db.update_one('transactions', {'id': deposit_id}, {
-                'status': 'completed',
-                'completed_at': datetime.now().isoformat()
-            })
-            
-        withdrawal_id = match.get('withdrawal_id')
-        if withdrawal_id:
-            db.update_one('transactions', {'id': withdrawal_id}, {
-                'status': 'completed',
-                'completed_at': datetime.now().isoformat()
-            })
-            
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error confirming match: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -2303,7 +2068,7 @@ def assign_requisites_to_transaction(transaction_id):
 @app.route('/api/trader/transactions/<transaction_id>/receipt', methods=['POST'])
 @role_required('trader')
 @csrf_protect
-def upload_transaction_receipt(tx_id):
+def upload_transaction_receipt(transaction_id):
     if 'receipt' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
     
@@ -2323,9 +2088,6 @@ def upload_transaction_receipt(tx_id):
         return jsonify({'success': True, 'filename': filename})
     
     return jsonify({'error': 'Invalid file type'}), 400
-
-
-
 
 @app.route('/api/trader/orders/<order_id>', methods=['PUT', 'DELETE'])
 @role_required('trader')
@@ -2429,7 +2191,7 @@ def get_transaction_details(transaction_id):
 @app.route('/api/trader/transactions/<int:tx_id>/requisites', methods=['POST'])
 @role_required('trader')
 @csrf_protect
-def assign_requisites_to_transaction_merch(tx_id):
+def assign_requisites_to_transaction_tr(tx_id):
     user = get_current_user()
     try:
         data = request.get_json()
@@ -2707,14 +2469,13 @@ def create_merchant_transaction():
             'merchant_id': int(user['id']),
             'type': data.get('type'),
             'amount': float(data.get('amount', 0)),
-            'currency': data.get('currency', 'RUB'),  # Добавляем валюту, по умолчанию RUB
+            'currency': data.get('currency', 'RUB'), 
             'method': data.get('method'),
             'status': 'pending',
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
         }
         
-        logger.info(f"Creating new transaction with data: {new_tx}")
         db.insert_one('transactions', new_tx)
         return jsonify({'success': True, 'transaction': new_tx})
     
