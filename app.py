@@ -15,6 +15,9 @@ import secrets
 from services.matching_service import MatchingService
 import time
 import threading
+from threading import Lock
+
+db_lock = Lock()
 
 
 # Настройка логгирования
@@ -1801,13 +1804,20 @@ def platform_requisites():
 def approve_transaction(tx_id):
     try:
         with db_lock:
-            transaction = db.find_one('transactions', {'id': int(tx_id)})
+            # Преобразуем ID в int
+            tx_id_int = int(tx_id)
+            
+            transaction = db.find_one('transactions', {'id': tx_id_int})
             if not transaction:
+                logger.error(f"Transaction {tx_id_int} not found")
                 return jsonify({'error': 'Transaction not found'}), 404
 
-            if transaction.get('status') not in ['pending', 'pending_admin_approval']:
-                return jsonify({'error': 'Transaction is not pending approval'}), 400
+            current_status = transaction.get('status')
+            if current_status not in ['pending', 'pending_admin_approval']:
+                logger.error(f"Transaction {tx_id_int} has invalid status: {current_status}")
+                return jsonify({'error': f'Transaction is not pending approval (current status: {current_status})'}), 400
 
+            # Обновляем транзакцию
             updates = {
                 'status': 'completed',
                 'completed_at': datetime.now().isoformat(),
@@ -1815,21 +1825,36 @@ def approve_transaction(tx_id):
                 'approved_by': session['user_id']
             }
             
-            db.update_one('transactions', {'id': int(tx_id)}, updates)
+            db.update_one('transactions', {'id': tx_id_int}, updates)
 
+            # Для депозитов обновляем баланс пользователя
             if transaction.get('type') == 'deposit' and 'user_id' in transaction:
-                user = db.find_one('users', {'id': transaction['user_id']})
+                user_id = int(transaction['user_id'])
+                user = db.find_one('users', {'id': user_id})
                 if not user:
-                    logger.error(f"User {transaction['user_id']} not found for transaction {tx_id}")
+                    logger.error(f"User {user_id} not found for transaction {tx_id_int}")
                     return jsonify({'error': 'User not found'}), 404
                     
-                new_balance = float(user.get('balance', 0)) + float(transaction.get('amount', 0))
-                db.update_one('users', {'id': user['id']}, {'balance': new_balance})
+                current_balance = float(user.get('balance', 0))
+                deposit_amount = float(transaction.get('amount', 0))
+                new_balance = current_balance + deposit_amount
+                
+                logger.info(f"Updating user {user_id} balance: {current_balance} + {deposit_amount} = {new_balance}")
+                db.update_one('users', {'id': user_id}, {'balance': new_balance})
 
-            # Одно сохранение в конце
+            # Сохраняем изменения
             db.save()
-            return jsonify({'success': True, 'new_status': 'completed'})
+            
+            logger.info(f"Transaction {tx_id_int} approved successfully")
+            return jsonify({
+                'success': True, 
+                'new_status': 'completed',
+                'message': 'Transaction approved successfully'
+            })
 
+    except ValueError as e:
+        logger.error(f"Invalid transaction ID format: {tx_id} - {str(e)}")
+        return jsonify({'error': 'Invalid transaction ID format'}), 400
     except Exception as e:
         logger.error(f"Error approving transaction {tx_id}: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
