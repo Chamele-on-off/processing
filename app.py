@@ -1800,37 +1800,39 @@ def platform_requisites():
 @csrf_protect
 def approve_transaction(tx_id):
     try:
-        # Получаем транзакцию
-        transaction = db.find_one('transactions', {'id': int(tx_id)})
-        if not transaction:
-            return jsonify({'error': 'Transaction not found'}), 404
+        with db_lock:
+            transaction = db.find_one('transactions', {'id': int(tx_id)})
+            if not transaction:
+                return jsonify({'error': 'Transaction not found'}), 404
 
-        if transaction.get('status') not in ['pending', 'pending_admin_approval']:
-            return jsonify({'error': 'Transaction is not pending approval'}), 400
+            if transaction.get('status') not in ['pending', 'pending_admin_approval']:
+                return jsonify({'error': 'Transaction is not pending approval'}), 400
 
-        # Обновляем транзакцию
-        updates = {
-            'status': 'completed',
-            'completed_at': datetime.now().isoformat(),
-            'approved_at': datetime.now().isoformat(),
-            'approved_by': session['user_id']
-        }
-        
-        db.update_one('transactions', {'id': int(tx_id)}, updates)
-        db.save()
+            updates = {
+                'status': 'completed',
+                'completed_at': datetime.now().isoformat(),
+                'approved_at': datetime.now().isoformat(),
+                'approved_by': session['user_id']
+            }
+            
+            db.update_one('transactions', {'id': int(tx_id)}, updates)
 
-        # Обновляем баланс пользователя для депозитов
-        if transaction.get('type') == 'deposit' and 'user_id' in transaction:
-            user = db.find_one('users', {'id': transaction['user_id']})
-            if user:
+            if transaction.get('type') == 'deposit' and 'user_id' in transaction:
+                user = db.find_one('users', {'id': transaction['user_id']})
+                if not user:
+                    logger.error(f"User {transaction['user_id']} not found for transaction {tx_id}")
+                    return jsonify({'error': 'User not found'}), 404
+                    
                 new_balance = float(user.get('balance', 0)) + float(transaction.get('amount', 0))
                 db.update_one('users', {'id': user['id']}, {'balance': new_balance})
-                db.save()
 
-        return jsonify({'success': True, 'new_status': 'completed'})
+            # Одно сохранение в конце
+            db.save()
+            return jsonify({'success': True, 'new_status': 'completed'})
+
     except Exception as e:
-        logger.error(f"Error approving transaction: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error approving transaction {tx_id}: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 # Эндпоинт для подтверждения матчинга
 @app.route('/api/admin/matches/<int:match_id>/confirm', methods=['POST'])
