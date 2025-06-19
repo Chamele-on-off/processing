@@ -1,0 +1,180 @@
+{% extends "admin.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Flash сообщения -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show mb-4">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h1><i class="fas fa-money-bill-wave me-2"></i>Депозиты</h1>
+    
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#pending">Ожидающие ({{ pending_deposits|length }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#completed">Завершенные ({{ completed_deposits|length }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#rejected">Отклоненные ({{ rejected_deposits|length }})</a>
+        </li>
+    </ul>
+    
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="pending">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Пользователь</th>
+                                    <th>Сумма</th>
+                                    <th>Валюта</th>
+                                    <th>Метод</th>
+                                    <th>Дата создания</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deposit in pending_deposits %}
+                                <tr>
+                                    <td>{{ deposit.id }}</td>
+                                    <td>{{ deposit.user_email }}</td>
+                                    <td>{{ "%.2f"|format(deposit.amount) }}</td>
+                                    <td>{{ deposit.currency }}</td>
+                                    <td>{{ deposit.method }}</td>
+                                    <td>{{ deposit.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('complete_deposit', deposit_id=deposit.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Подтвердить депозит #{{ deposit.id }}?')">
+                                                <i class="fas fa-check"></i> Подтвердить
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('reject_deposit', deposit_id=deposit.id) }}" class="d-inline ms-1">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Отклонить депозит #{{ deposit.id }}?')">
+                                                <i class="fas fa-times"></i> Отклонить
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">Нет ожидающих депозитов</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-pane fade" id="completed">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Пользователь</th>
+                                    <th>Сумма</th>
+                                    <th>Валюта</th>
+                                    <th>Метод</th>
+                                    <th>Дата создания</th>
+                                    <th>Дата завершения</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deposit in completed_deposits %}
+                                <tr>
+                                    <td>{{ deposit.id }}</td>
+                                    <td>{{ deposit.user_email }}</td>
+                                    <td>{{ "%.2f"|format(deposit.amount) }}</td>
+                                    <td>{{ deposit.currency }}</td>
+                                    <td>{{ deposit.method }}</td>
+                                    <td>{{ deposit.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td>{{ deposit.completed_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">Нет завершенных депозитов</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-pane fade" id="rejected">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Пользователь</th>
+                                    <th>Сумма</th>
+                                    <th>Валюта</th>
+                                    <th>Метод</th>
+                                    <th>Дата создания</th>
+                                    <th>Дата отклонения</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deposit in rejected_deposits %}
+                                <tr>
+                                    <td>{{ deposit.id }}</td>
+                                    <td>{{ deposit.user_email }}</td>
+                                    <td>{{ "%.2f"|format(deposit.amount) }}</td>
+                                    <td>{{ deposit.currency }}</td>
+                                    <td>{{ deposit.method }}</td>
+                                    <td>{{ deposit.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td>{{ deposit.rejected_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">Нет отклоненных депозитов</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Обработка отправки форм
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const buttons = this.querySelectorAll('button[type="submit"]');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

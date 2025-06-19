@@ -1,0 +1,73 @@
+<!-- transaction_modal.html -->
+<div class="modal fade" id="transactionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Транзакция #<span id="transactionModalId"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6>Основная информация</h6>
+                        <table class="table table-sm">
+                            <tr><th>Тип:</th><td id="transactionModalType"></td></tr>
+                            <tr><th>Сумма:</th><td id="transactionModalAmount"></td></tr>
+                            <tr><th>Комиссия:</th><td id="transactionModalFee"></td></tr>
+                            <tr><th>Метод:</th><td id="transactionModalMethod"></td></tr>
+                            <tr><th>Статус:</th><td id="transactionModalStatus"></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Дополнительно</h6>
+                        <table class="table table-sm">
+                            <tr><th>Создана:</th><td id="transactionModalCreated"></td></tr>
+                            <tr><th>ID мерчанта:</th><td id="transactionModalMerchantId"></td></tr>
+                            <tr><th>ID трейдера:</th><td id="transactionModalTraderId"></td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mb-4" id="transactionRequisitesSection">
+                    <h6>Реквизиты</h6>
+                    <div id="transactionRequisitesDetails"></div>
+                    <button class="btn btn-sm btn-primary mt-2" id="addRequisitesBtn">
+                        <i class="fas fa-plus me-1"></i> Добавить реквизиты
+                    </button>
+                </div>
+
+                <div class="mb-4" id="transactionActions">
+                    <input type="file" id="receiptFileInput" style="display: none;" accept=".pdf,.jpg,.png">
+                    <button class="btn btn-info me-2" id="uploadReceiptBtn">
+                        <i class="fas fa-upload me-1"></i> Загрузить чек
+                    </button>
+                    <button class="btn btn-success" id="completeTransactionBtn">
+                        <i class="fas fa-check me-1"></i> Подтвердить выполнение
+                    </button>
+                </div>
+
+                <div id="receiptPreviewContainer" class="mb-4" style="display: none;">
+                    <h6>Загруженный чек</h6>
+                    <img id="receiptPreview" class="receipt-preview" src="" alt="Превью чека">
+                </div>
+
+                <h6 class="mb-3">История изменений</h6>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Событие</th>
+                            <th>Комментарий</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionHistory">
+                        <!-- Данные будут загружаться динамически -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>

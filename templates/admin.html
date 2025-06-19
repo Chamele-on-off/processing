@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ панель | Processing Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .nav-link {
+            color: #333;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .badge {
+            font-size: 0.85em;
+        }
+        .balance-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .quick-actions .btn {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        #sidebar {
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-heading {
+            padding: 1.5rem 1rem;
+            font-weight: 600;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .nav-link {
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            margin: 0.25rem 0;
+        }
+        
+        .nav-link:hover {
+            background-color: #e9ecef;
+        }
+        
+        .nav-link.active {
+            background-color: #e7f1ff;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.35rem;
+            font-weight: 600;
+        }
+        
+        .badge-admin { background-color: #6f42c1; }
+        .badge-trader { background-color: #20c997; }
+        .badge-merchant { background-color: #fd7e14; }
+        
+        .border-start-primary { border-left: 0.25rem solid #4e73df !important; }
+        .border-start-success { border-left: 0.25rem solid #1cc88a !important; }
+        .border-start-info { border-left: 0.25rem solid #36b9cc !important; }
+        .border-start-warning { border-left: 0.25rem solid #f6c23e !important; }
+        
+        .page-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .page-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+            color: #0d6efd;
+            border-bottom: 2px solid #0d6efd;
+        }
+        
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
+        
+        .toast {
+            margin-bottom: 10px;
+            border-radius: 0.375rem;
+        }
+        
+        .btn-xs {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 0.15em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-rotate 0.75s linear infinite;
+        }
+        
+        @keyframes spinner-rotate {
+            to { transform: rotate(360deg); }
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            background-color: #ffffff !important;
+        }
+        
+        .table {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        /* Стили для консоли логов */
+        #log-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            border-top: 1px solid #444;
+        }
+
+        #log-console .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        #log-console .log-time {
+            color: #6a9955;
+        }
+
+        #log-console .log-method {
+            color: #569cd6;
+        }
+
+        #log-console .log-url {
+            color: #9cdcfe;
+        }
+
+        #log-console .log-status {
+            color: #b5cea8;
+        }
+
+        #log-console .log-error {
+            color: #f48771;
+        }
+
+        #log-console .log-success {
+            color: #4ec9b0;
+        }
+
+        #log-console .log-info {
+            color: #c586c0;
+        }
+
+        #log-toggle {
+            position: fixed;
+            bottom: 210px;
+            right: 20px;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #1e1e1e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Стили для секции баланса */
+        .balance-content {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Стили для модального окна подтверждения транзакций */
+        .receipt-preview {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .requisites-container {
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+            padding: 15px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="d-flex flex-column flex-shrink-0 p-3 bg-white" id="sidebar" style="width: 280px;">
+            <div class="sidebar-heading">
+                <i class="fas fa-user-shield me-2"></i>Администратор
+            </div>
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt me-2"></i> Дашборд
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="users">
+                        <i class="fas fa-users me-2"></i> Пользователи
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="transactions">
+                        <i class="fas fa-exchange-alt me-2"></i> Транзакции
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/balance" class="nav-link" data-section="balance">
+                        <i class="fas fa-wallet me-2"></i> Баланс платформы
+                    </a>
+                </li>
+                <li>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-home me-2"></i> На главную
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3">
+                <div class="container-fluid px-4">
+                    <button class="btn btn-link me-2" id="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <div class="navbar-nav ms-auto">
+                        <div class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i> 
+                                {% if current_user and current_user.email %}
+                                    {{ current_user.email }}
+                                {% else %}
+                                    Администратор
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="/logout">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Выйти
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            {% block content %}
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="container-fluid px-4 py-4 page-section active">
+                <h1 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i>Дашборд</h1>
+                
+                <!-- Quick Actions -->
+                <div class="row mb-4 quick-actions">
+                    <div class="col-12">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#depositsModal">
+                            <i class="fas fa-money-bill-wave me-2"></i>Подтвердить депозиты
+                        </button>
+                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#withdrawalsModal">
+                            <i class="fas fa-money-bill-transfer me-2"></i>Подтвердить выводы
+                        </button>
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#matchingModal">
+                            <i class="fas fa-random me-2"></i>Матчинг транзакций
+                        </button>
+                        <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                            <i class="fas fa-cog me-2"></i>Настройки комиссий
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-start-primary h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Пользователей всего</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            {% if stats and stats.total_users is defined %}
+                                                {{ stats.total_users }}
+                                            {% else %}
+                                                0
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-start-success h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Транзакций (сегодня)</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            {% if stats and stats.today_transactions is defined %}
+                                                {{ stats.today_transactions }}
+                                            {% else %}
+                                                0
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-start-info h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Активных трейдеров</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            {% if stats and stats.active_traders is defined %}
+                                                {{ stats.active_traders }}
+                                            {% else %}
+                                                0
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-start-warning h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Ср. время обработки (мин)</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            {% if stats and stats.avg_processing_time is defined %}
+                                                {{ stats.avg_processing_time }}
+                                            {% else %}
+                                                0
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-12 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Последние транзакции</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Тип</th>
+                                                <th>Сумма</th>
+                                                <th>Статус</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if recent_transactions %}
+                                                {% for tx in recent_transactions %}
+                                                <tr>
+                                                    <td>{{ tx.id }}</td>
+                                                    <td>{{ tx.type|capitalize }}</td>
+                                                    <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
+                                                    <td>
+                                                        <span class="badge bg-{{ 
+                                                            'success' if tx.status == 'completed' 
+                                                            else 'warning' if tx.status == 'pending' 
+                                                            else 'danger' 
+                                                        }}">
+                                                            {{ tx.status }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center">Нет данных о транзакциях</td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users-section" class="container-fluid px-4 py-4 page-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="fas fa-users me-2"></i>Пользователи</h1>
+                    <a href="/admin/users/create" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Добавить
+                    </a>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Список пользователей</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover" id="usersTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Email</th>
+                                        <th>Роль</th>
+                                        <th>Статус</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if users %}
+                                        {% for user in users %}
+                                        <tr>
+                                            <td>{{ user.id }}</td>
+                                            <td>{{ user.email }}</td>
+                                            <td>
+                                                <span class="badge bg-{{ 
+                                                    'primary' if user.role == 'admin' 
+                                                    else 'success' if user.role == 'trader' 
+                                                    else 'warning' 
+                                                }}">
+                                                    {{ user.role }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ 'success' if user.active else 'secondary' }}">
+                                                    {{ 'Активен' if user.active else 'Неактивен' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="/admin/users/{{ user.id }}" class="btn btn-sm btn-outline-primary me-1" title="Редактировать">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="/admin/users/{{ user.id }}/transactions" class="btn btn-sm btn-outline-info me-1" title="Просмотр транзакций">
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                </a>
+                                                {% if user.role == 'trader' %}
+                                                <a href="/admin/users/{{ user.id }}/requisites" class="btn btn-sm btn-outline-secondary" title="Просмотр реквизитов">
+                                                    <i class="fas fa-credit-card"></i>
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">Нет данных о пользователях</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Section -->
+            <div id="transactions-section" class="container-fluid px-4 py-4 page-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="fas fa-exchange-alt me-2"></i>Транзакции</h1>
+                    <div>
+                        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newTransactionModal">
+                            <i class="fas fa-plus me-2"></i>Новая
+                        </button>
+                        <button class="btn btn-info" id="platformRequisitesBtn">
+                            <i class="fas fa-credit-card me-2"></i>Реквизиты платформы
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#all-transactions">Все</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#pending-transactions">Ожидающие</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#completed-transactions">Завершенные</a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="all-transactions">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover" id="allTransactionsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Пользователь</th>
+                                                <th>Тип</th>
+                                                <th>Сумма</th>
+                                                <th>Статус</th>
+                                                <th>Дата</th>
+                                                <th>Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if all_transactions %}
+                                                {% for tx in all_transactions %}
+                                                <tr>
+                                                    <td>{{ tx.id }}</td>
+                                                    <td>{{ tx.user_email }}</td>
+                                                    <td>{{ tx.type|capitalize }}</td>
+                                                    <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
+                                                    <td>
+                                                        <span class="badge bg-{{ 
+                                                            'success' if tx.status == 'completed' 
+                                                            else 'warning' if tx.status == 'pending_admin_approval'
+                                                            else 'secondary' 
+                                                        }}">
+                                                            {{ tx.status }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ tx.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-info view-tx-details" data-tx-id="{{ tx.id }}">
+                                                            <i class="fas fa-eye"></i> Подробности
+                                                        </button>
+                                                        {% if tx.status == 'pending_admin_approval' %}
+                                                        <button class="btn btn-sm btn-success approve-tx ms-1" data-tx-id="{{ tx.id }}">
+                                                            <i class="fas fa-check"></i> Подтвердить
+                                                        </button>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="7" class="text-center">Нет данных о транзакциях</td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane fade" id="pending-transactions">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover" id="pendingTransactionsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Пользователь</th>
+                                                <th>Тип</th>
+                                                <th>Сумма</th>
+                                                <th>Дата</th>
+                                                <th>Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if pending_transactions %}
+                                                {% for tx in pending_transactions %}
+                                                <tr data-tx-id="{{ tx.id }}">
+                                                    <td>{{ tx.id }}</td>
+                                                    <td>{{ tx.user_email }}</td>
+                                                    <td>{{ tx.type|capitalize }}</td>
+                                                    <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
+                                                    <td>{{ tx.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-info view-tx-details" data-tx-id="{{ tx.id }}">
+                                                            <i class="fas fa-eye"></i> Подробности
+                                                        </button>
+                                                        <button class="btn btn-sm btn-success approve-tx ms-1" data-tx-id="{{ tx.id }}">
+                                                            <i class="fas fa-check"></i> Подтвердить
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center">Нет ожидающих транзакций</td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-pane fade" id="completed-transactions">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover" id="completedTransactionsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Пользователь</th>
+                                                <th>Тип</th>
+                                                <th>Сумма</th>
+                                                <th>Дата завершения</th>
+                                                <th>Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if completed_transactions %}
+                                                {% for tx in completed_transactions %}
+                                                <tr>
+                                                    <td>{{ tx.id }}</td>
+                                                    <td>{{ tx.user_email }}</td>
+                                                    <td>{{ tx.type|capitalize }}</td>
+                                                    <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
+                                                    <td>{{ tx.completed_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-info view-tx-details" data-tx-id="{{ tx.id }}">
+                                                            <i class="fas fa-eye"></i> Подробности
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center">Нет завершенных транзакций</td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Balance Section -->
+            <div id="balance-section" class="container-fluid px-4 py-4 page-section">
+                <!-- Контент будет загружен с сервера -->
+            </div>
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- New Transaction Modal -->
+    <div class="modal fade" id="newTransactionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая транзакция</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="/admin/transactions/create">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Пользователь</label>
+                            <select class="form-select" name="user_id" required>
+                                {% if active_users %}
+                                    {% for user in active_users %}
+                                    <option value="{{ user.id }}">{{ user.email }} ({{ user.role }})</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="" disabled>Нет активных пользователей</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Тип транзакции</label>
+                            <select class="form-select" name="type" required>
+                                <option value="deposit">Депозит</option>
+                                <option value="withdrawal">Вывод</option>
+                                <option value="transfer">Перевод</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Сумма</label>
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Валюта</label>
+                            <select class="form-select" name="currency" required>
+                                <option value="RUB">RUB</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USDT">USDT</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Details Modal -->
+    <div class="modal fade" id="transactionDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Детали транзакции <span id="txIdTitle"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <div id="txBasicInfo"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Реквизиты</h6>
+                            <div id="txRequisitesInfo"></div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Чек/Подтверждение</h6>
+                        <div id="txReceiptInfo" class="receipt-preview"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approve Transaction Modal -->
+    <div class="modal fade" id="approveTransactionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Подтверждение транзакции <span id="approveTxIdTitle"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Информация о транзакции</h6>
+                            <div id="approveTxBasicInfo"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Реквизиты</h6>
+                            <div id="approveTxRequisitesInfo"></div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Чек/Подтверждение</h6>
+                        <div id="approveTxReceiptInfo" class="receipt-preview"></div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Реквизиты платформы</h6>
+                        <div id="platformRequisitesInfo" class="requisites-container"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="confirmApproveBtn">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Requisites Modal -->
+    <div class="modal fade" id="platformRequisitesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Реквизиты платформы</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Банковские реквизиты</label>
+                        <textarea class="form-control" id="bankRequisitesText" rows="8"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Крипто-кошельки</label>
+                        <textarea class="form-control" id="cryptoRequisitesText" rows="5"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Другие платежные системы</label>
+                        <textarea class="form-control" id="otherRequisitesText" rows="5"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-primary" id="saveRequisitesBtn">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposits Approval Modal -->
+    <div class="modal fade" id="depositsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave me-2"></i>Подтверждение депозитов трейдеров</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Трейдер</th>
+                                    <th>Сумма</th>
+                                    <th>Валюта</th>
+                                    <th>Метод</th>
+                                    <th>Дата</th>
+                                    <th>Реквизиты</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingDepositsTable">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdrawals Approval Modal -->
+    <div class="modal fade" id="withdrawalsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-transfer me-2"></i>Подтверждение выводов трейдеров</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Трейдер</th>
+                                    <th>Сумма</th>
+                                    <th>Валюта</th>
+                                    <th>Метод</th>
+                                    <th>Дата</th>
+                                    <th>Реквизиты</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingWithdrawalsTable">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matching Modal -->
+    <div class="modal fade" id="matchingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-random me-2"></i>Матчинг транзакций</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold">Ожидающие депозиты</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Сумма</th>
+                                                    <th>Валюта</th>
+                                                    <th>Мерчант</th>
+                                                    <th>Действия</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="pendingDepositsList">
+                                                <!-- Will be populated by JavaScript -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold">Ожидающие выводы</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Сумма</th>
+                                                    <th>Валюта</th>
+                                                    <th>Мерчант</th>
+                                                    <th>Действия</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="pendingWithdrawalsList">
+                                                <!-- Will be populated by JavaScript -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold">Найденные совпадения</h6>
+                            <button id="runMatchingBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-sync me-1"></i>Запустить матчинг
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Депозиты</th>
+                                            <th>Вывод</th>
+                                            <th>Сумма</th>
+                                            <th>Валюта</th>
+                                            <th>Комиссия</th>
+                                            <th>Статус</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="matchesList">
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Настройки комиссий и курсов</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="settingsForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Комиссия по умолчанию (%)</label>
+                            <input type="number" class="form-control" id="defaultFee" step="0.01" min="0" max="10">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Комиссия трейдера (%)</label>
+                            <input type="number" class="form-control" id="traderFee" step="0.01" min="0" max="10">
+                        </div>
+                        <hr>
+                        <h6 class="mb-3">Курсы валют</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">USD</label>
+                                <input type="number" class="form-control" id="usdRate" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">EUR</label>
+                                <input type="number" class="form-control" id="eurRate" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">USDT</label>
+                                <input type="number" class="form-control" id="usdtRate" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Консоль для логов -->
+    <button id="log-toggle" title="Показать/скрыть логи">
+        <i class="fas fa-terminal"></i>
+    </button>
+    <div id="log-console"></div>
+
+    <script>
+        // Логирование всех запросов
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const startTime = new Date();
+            let method = 'GET';
+            let url = args[0];
+            
+            if (args[1]) {
+                method = args[1].method || 'GET';
+                url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            }
+            
+            logRequest(method, url, args[1] ? args[1].body : null);
+            
+            try {
+                const response = await originalFetch.apply(this, args);
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                
+                // Клонируем response для чтения body без потребления оригинального потока
+                const clonedResponse = response.clone();
+                let responseData = null;
+                
+                try {
+                    responseData = await clonedResponse.text();
+                } catch (e) {
+                    responseData = '[Не удалось прочитать ответ]';
+                }
+                
+                logResponse(method, url, response.status, duration, responseData);
+                return response;
+            } catch (error) {
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                logError(method, url, error, duration);
+                throw error;
+            }
+        };
+
+        // Функции логирования
+        function logRequest(method, url, body) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let bodyInfo = '';
+            if (body) {
+                try {
+                    const parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
+                    bodyInfo = `<span class="log-info">Body: ${JSON.stringify(parsedBody, null, 2)}</span>`;
+                } catch (e) {
+                    bodyInfo = `<span class="log-info">Body: ${body}</span>`;
+                }
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                ${bodyInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logResponse(method, url, status, duration, data) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let dataInfo = '';
+            if (data) {
+                dataInfo = `<span class="log-info">Response: ${data}</span>`;
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-status">${status}</span>
+                <span class="log-success">(${duration}ms)</span>
+                ${dataInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(method, url, error, duration) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-error">ERROR: ${error.message}</span>
+                <span class="log-error">(${duration}ms)</span>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function scrollLogsToBottom() {
+            const console = document.getElementById('log-console');
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Переключение консоли логов
+        document.getElementById('log-toggle').addEventListener('click', function() {
+            const console = document.getElementById('log-console');
+            if (console.style.display === 'block') {
+                console.style.display = 'none';
+            } else {
+                console.style.display = 'block';
+            }
+        });
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            logInfo('Инициализация админ панели', 'Загрузка DOM завершена');
+            
+            // Инициализация DataTables
+            $('#usersTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json"
+                },
+                order: [[0, 'desc']]
+            });
+
+            $('#allTransactionsTable, #pendingTransactionsTable, #completedTransactionsTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json"
+                },
+                order: [[0, 'desc']]
+            });
+            
+            logInfo('DataTables', 'Таблицы инициализированы');
+            
+            // Навигация между разделами
+            document.querySelectorAll('.nav-link[data-section]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Убираем активный класс у всех элементов меню
+                    document.querySelectorAll('.nav-link').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    
+                    // Добавляем активный класс текущему элементу
+                    this.classList.add('active');
+                    
+                    // Скрываем все разделы
+                    document.querySelectorAll('.page-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Показываем выбранный раздел
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    const section = document.getElementById(sectionId);
+                    
+                    if (sectionId === 'balance-section') {
+                        // Показываем спиннер загрузки
+                        section.innerHTML = `
+                            <div class="d-flex justify-content-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                            </div>
+                        `;
+                        section.classList.add('active');
+                        
+                        // Загружаем страницу баланса
+                        fetch(this.getAttribute('href'))
+                            .then(response => {
+                                if (!response.ok) throw new Error('Ошибка загрузки');
+                                return response.text();
+                            })
+                            .then(html => {
+                                section.innerHTML = html;
+                                logSuccess('Баланс', 'Данные баланса успешно загружены');
+                                
+                                // Удаляем активный класс у всех других секций
+                                document.querySelectorAll('.page-section').forEach(sec => {
+                                    if (sec.id !== sectionId) sec.classList.remove('active');
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Ошибка загрузки баланса:', error);
+                                section.innerHTML = `
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Ошибка загрузки данных баланса: ${error.message}
+                                    </div>
+                                `;
+                                logError('Баланс', 'Ошибка загрузки данных баланса', error);
+                            });
+                    } else {
+                        // Для других секций просто показываем их
+                        document.querySelectorAll('.page-section').forEach(sec => {
+                            sec.classList.remove('active');
+                        });
+                        section.classList.add('active');
+                    }
+                    
+                    logInfo('Навигация', `Переход в раздел: ${this.getAttribute('data-section')}`);
+                });
+            });
+            
+            // Переключение сайдбара
+            document.getElementById('menu-toggle').addEventListener('click', function() {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.style.display === 'none') {
+                    sidebar.style.display = 'block';
+                    logInfo('UI', 'Сайдбар показан');
+                } else {
+                    sidebar.style.display = 'none';
+                    logInfo('UI', 'Сайдбар скрыт');
+                }
+            });
+
+            // Обработчик для кнопок просмотра деталей транзакции
+            document.addEventListener('click', async function(e) {
+                if (e.target.closest('.view-tx-details')) {
+                    const button = e.target.closest('.view-tx-details');
+                    const txId = button.dataset.txId;
+                    
+                    logInfo('Транзакции', `Запрос деталей транзакции ID: ${txId}`);
+                    
+                    try {
+                        const response = await fetch(`/api/admin/transactions/${txId}/details`);
+                        const txDetails = await response.json();
+                        
+                        // Заполняем модальное окно деталями транзакции
+                        document.getElementById('txIdTitle').textContent = `#${txDetails.id}`;
+                        
+                        const basicInfoHtml = `
+                            <p><strong>Тип:</strong> ${txDetails.type}</p>
+                            <p><strong>Сумма:</strong> ${txDetails.amount.toFixed(2)} ${txDetails.currency}</p>
+                            <p><strong>Статус:</strong> <span class="badge bg-${txDetails.status === 'completed' ? 'success' : 'warning'}">${txDetails.status}</span></p>
+                            <p><strong>Дата создания:</strong> ${new Date(txDetails.created_at).toLocaleString()}</p>
+                            ${txDetails.completed_at ? `<p><strong>Дата завершения:</strong> ${new Date(txDetails.completed_at).toLocaleString()}</p>` : ''}
+                            <p><strong>Пользователь:</strong> ${txDetails.user_email}</p>
+                        `;
+                        document.getElementById('txBasicInfo').innerHTML = basicInfoHtml;
+                        
+                        const requisitesHtml = txDetails.requisites ? `
+                            <p><strong>Метод:</strong> ${txDetails.method || 'Не указан'}</p>
+                            <pre>${JSON.stringify(txDetails.requisites, null, 2)}</pre>
+                        ` : '<p>Реквизиты не указаны</p>';
+                        document.getElementById('txRequisitesInfo').innerHTML = requisitesHtml;
+                        
+                        const receiptHtml = txDetails.receipt_file ? `
+                            <p><a href="/uploads/${txDetails.receipt_file}" target="_blank" class="btn btn-sm btn-primary mb-2">
+                                <i class="fas fa-download me-1"></i>Скачать чек
+                            </a></p>
+                            <iframe src="/uploads/${txDetails.receipt_file}" width="100%" height="500px"></iframe>
+                        ` : '<p>Чек не загружен</p>';
+                        document.getElementById('txReceiptInfo').innerHTML = receiptHtml;
+                        
+                        // Показываем модальное окно
+                        const modal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+                        modal.show();
+                        
+                        logSuccess('Транзакции', `Детали транзакции ID: ${txId} загружены`);
+                    } catch (error) {
+                        console.error('Ошибка загрузки деталей транзакции:', error);
+                        showToast('Ошибка загрузки деталей транзакции', 'error');
+                        logError('Транзакции', `Ошибка загрузки деталей транзакции ID: ${txId}`, error);
+                    }
+                }
+            });
+
+            // Обработчик для кнопок подтверждения транзакций
+            document.addEventListener('click', async function(e) {
+                if (e.target.closest('.approve-tx')) {
+                    const button = e.target.closest('.approve-tx');
+                    const txId = button.dataset.txId;
+                    
+                    logInfo('Транзакции', `Подтверждение транзакции ID: ${txId}`);
+                    
+                    try {
+                        const response = await fetch(`/api/admin/transactions/${txId}/details`);
+                        const txDetails = await response.json();
+                        
+                        // Заполняем модальное окно подтверждения
+                        document.getElementById('approveTxIdTitle').textContent = `#${txDetails.id}`;
+                        
+                        const basicInfoHtml = `
+                            <p><strong>Тип:</strong> ${txDetails.type}</p>
+                            <p><strong>Сумма:</strong> ${txDetails.amount.toFixed(2)} ${txDetails.currency}</p>
+                            <p><strong>Статус:</strong> <span class="badge bg-warning">${txDetails.status}</span></p>
+                            <p><strong>Дата создания:</strong> ${new Date(txDetails.created_at).toLocaleString()}</p>
+                            <p><strong>Пользователь:</strong> ${txDetails.user_email}</p>
+                        `;
+                        document.getElementById('approveTxBasicInfo').innerHTML = basicInfoHtml;
+                        
+                        const requisitesHtml = txDetails.requisites ? `
+                            <p><strong>Метод:</strong> ${txDetails.method || 'Не указан'}</p>
+                            <pre>${JSON.stringify(txDetails.requisites, null, 2)}</pre>
+                        ` : '<p>Реквизиты не указаны</p>';
+                        document.getElementById('approveTxRequisitesInfo').innerHTML = requisitesHtml;
+                        
+                        const receiptHtml = txDetails.receipt_file ? `
+                            <p><a href="/uploads/${txDetails.receipt_file}" target="_blank" class="btn btn-sm btn-primary mb-2">
+                                <i class="fas fa-download me-1"></i>Скачать чек
+                            </a></p>
+                            <iframe src="/uploads/${txDetails.receipt_file}" width="100%" height="500px"></iframe>
+                        ` : '<p>Чек не загружен</p>';
+                        document.getElementById('approveTxReceiptInfo').innerHTML = receiptHtml;
+                        
+                        // Загружаем реквизиты платформы
+                        const requisitesResponse = await fetch('/api/admin/platform-requisites');
+                        const requisites = await requisitesResponse.json();
+                        
+                        let platformRequisitesHtml = '<p>Реквизиты платформы не настроены</p>';
+                        if (requisites.bank_details || requisites.crypto_wallets || requisites.other_methods) {
+                            platformRequisitesHtml = '';
+                            if (requisites.bank_details) {
+                                platformRequisitesHtml += `<h6>Банковские реквизиты:</h6><pre>${requisites.bank_details}</pre>`;
+                            }
+                            if (requisites.crypto_wallets) {
+                                platformRequisitesHtml += `<h6 class="mt-2">Крипто-кошельки:</h6><pre>${requisites.crypto_wallets}</pre>`;
+                            }
+                            if (requisites.other_methods) {
+                                platformRequisitesHtml += `<h6 class="mt-2">Другие методы:</h6><pre>${requisites.other_methods}</pre>`;
+                            }
+                        }
+                        document.getElementById('platformRequisitesInfo').innerHTML = platformRequisitesHtml;
+                        
+                        // Показываем модальное окно
+                        const modal = new bootstrap.Modal(document.getElementById('approveTransactionModal'));
+                        modal.show();
+                        
+                        // Обработчик подтверждения
+                        document.getElementById('confirmApproveBtn').onclick = async () => {
+                            document.getElementById('confirmApproveBtn').disabled = true;
+                            document.getElementById('confirmApproveBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Обработка...';
+                            
+                            try {
+                                const approveResponse = await fetch(`/api/admin/transactions/${txId}/approve`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token() }}'
+                                    }
+                                });
+                                
+                                if (approveResponse.ok) {
+                                    const result = await approveResponse.json();
+                                    showToast('Транзакция успешно подтверждена', 'success');
+                                    logSuccess('Транзакции', `Транзакция ID: ${txId} подтверждена`);
+                                    
+                                    // Обновляем таблицу
+                                    if (button.closest('tr')) {
+                                        button.closest('tr').remove();
+                                    }
+                                    
+                                    modal.hide();
+                                } else {
+                                    const error = await approveResponse.json();
+                                    throw new Error(error.error || 'Ошибка подтверждения транзакции');
+                                }
+                            } catch (error) {
+                                console.error('Ошибка подтверждения транзакции:', error);
+                                showToast(`Ошибка: ${error.message}`, 'error');
+                                logError('Транзакции', `Ошибка подтверждения транзакции ID: ${txId}`, error);
+                            } finally {
+                                document.getElementById('confirmApproveBtn').disabled = false;
+                                document.getElementById('confirmApproveBtn').innerHTML = 'Подтвердить';
+                            }
+                        };
+                        
+                        logSuccess('Транзакции', `Модальное окно подтверждения транзакции ID: ${txId} открыто`);
+                    } catch (error) {
+                        console.error('Ошибка загрузки деталей транзакции:', error);
+                        showToast('Ошибка загрузки деталей транзакции', 'error');
+                        logError('Транзакции', `Ошибка загрузки деталей транзакции ID: ${txId}`, error);
+                    }
+                }
+            });
+
+            // Обработчик для кнопки реквизитов платформы
+            document.getElementById('platformRequisitesBtn').addEventListener('click', async function() {
+                logInfo('Реквизиты', 'Запрос реквизитов платформы');
+                
+                try {
+                    const response = await fetch('/api/admin/platform-requisites');
+                    const requisites = await response.json();
+                    
+                    document.getElementById('bankRequisitesText').value = requisites.bank_details || '';
+                    document.getElementById('cryptoRequisitesText').value = requisites.crypto_wallets || '';
+                    document.getElementById('otherRequisitesText').value = requisites.other_methods || '';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('platformRequisitesModal'));
+                    modal.show();
+                    
+                    logSuccess('Реквизиты', 'Реквизиты платформы загружены');
+                } catch (error) {
+                    console.error('Ошибка загрузки реквизитов платформы:', error);
+                    showToast('Ошибка загрузки реквизитов платформы', 'error');
+                    logError('Реквизиты', 'Ошибка загрузки реквизитов платформы', error);
+                }
+            });
+
+            // Обработчик сохранения реквизитов платформы
+            document.getElementById('saveRequisitesBtn').addEventListener('click', async function() {
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Сохранение...';
+                
+                logInfo('Реквизиты', 'Сохранение реквизитов платформы');
+                
+                try {
+                    const requisites = {
+                        bank_details: document.getElementById('bankRequisitesText').value,
+                        crypto_wallets: document.getElementById('cryptoRequisitesText').value,
+                        other_methods: document.getElementById('otherRequisitesText').value
+                    };
+                    
+                    const response = await fetch('/api/admin/platform-requisites', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(requisites)
+                    });
+                    
+                    if (response.ok) {
+                        showToast('Реквизиты успешно сохранены', 'success');
+                        logSuccess('Реквизиты', 'Реквизиты платформы сохранены');
+                        
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('platformRequisitesModal'));
+                        modal.hide();
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка сохранения реквизитов');
+                    }
+                } catch (error) {
+                    console.error('Ошибка сохранения реквизитов:', error);
+                    showToast(`Ошибка: ${error.message}`, 'error');
+                    logError('Реквизиты', 'Ошибка сохранения реквизитов платформы', error);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Сохранить';
+                }
+            });
+
+            // Загрузка данных для модального окна депозитов трейдеров
+            $('#depositsModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка ожидающих депозитов трейдеров');
+                
+                const tableBody = document.getElementById('pendingDepositsTable');
+                tableBody.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Загрузка...</td></tr>';
+                
+                try {
+                    const response = await fetch('/api/admin/pending-trader-deposits');
+                    
+                    if (!response.ok) {
+                        throw new Error(await response.text());
+                    }
+                    
+                    const deposits = await response.json();
+                    
+                    if (deposits.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center">Нет ожидающих депозитов трейдеров</td></tr>';
+                        logInfo('Депозиты', 'Нет ожидающих депозитов трейдеров');
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = '';
+                    
+                    deposits.forEach(deposit => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${deposit.id}</td>
+                            <td>${deposit.trader_email}</td>
+                            <td>${deposit.amount.toFixed(2)}</td>
+                            <td>${deposit.currency || 'RUB'}</td>
+                            <td>${deposit.method}</td>
+                            <td>${new Date(deposit.created_at).toLocaleString()}</td>
+                            <td>${deposit.details}</td>
+                            <td>
+                                <button class="btn btn-sm btn-success complete-deposit" data-deposit-id="${deposit.id}">
+                                    <i class="fas fa-check"></i> Подтвердить
+                                </button>
+                                <button class="btn btn-sm btn-danger reject-deposit ms-1" data-deposit-id="${deposit.id}">
+                                    <i class="fas fa-times"></i> Отклонить
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    logSuccess('Депозиты', `Загружено ${deposits.length} ожидающих депозитов трейдеров`);
+                    
+                    // Добавляем обработчики для кнопок
+                    document.querySelectorAll('.complete-deposit').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const depositId = this.dataset.depositId;
+                            await processDepositAction(depositId, 'complete');
+                        });
+                    });
+                    
+                    document.querySelectorAll('.reject-deposit').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const depositId = this.dataset.depositId;
+                            await processDepositAction(depositId, 'reject');
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки депозитов трейдеров:', error);
+                    tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Ошибка загрузки данных</td></tr>';
+                    logError('Депозиты', 'Ошибка загрузки ожидающих депозитов трейдеров', error);
+                }
+            });
+
+            // Загрузка данных для модального окна выводов трейдеров
+            $('#withdrawalsModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка ожидающих выводов трейдеров');
+                
+                const tableBody = document.getElementById('pendingWithdrawalsTable');
+                tableBody.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Загрузка...</td></tr>';
+                
+                try {
+                    const response = await fetch('/api/admin/pending-trader-withdrawals');
+                    
+                    if (!response.ok) {
+                        throw new Error(await response.text());
+                    }
+                    
+                    const withdrawals = await response.json();
+                    
+                    if (withdrawals.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center">Нет ожидающих выводов трейдеров</td></tr>';
+                        logInfo('Выводы', 'Нет ожидающих выводов трейдеров');
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = '';
+                    
+                    withdrawals.forEach(withdrawal => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${withdrawal.id}</td>
+                            <td>${withdrawal.trader_email}</td>
+                            <td>${withdrawal.amount.toFixed(2)}</td>
+                            <td>${withdrawal.currency || 'RUB'}</td>
+                            <td>${withdrawal.method}</td>
+                            <td>${new Date(withdrawal.created_at).toLocaleString()}</td>
+                            <td>${withdrawal.details}</td>
+                            <td>
+                                <button class="btn btn-sm btn-success complete-withdrawal" data-withdrawal-id="${withdrawal.id}">
+                                    <i class="fas fa-check"></i> Подтвердить
+                                </button>
+                                <button class="btn btn-sm btn-danger reject-withdrawal ms-1" data-withdrawal-id="${withdrawal.id}">
+                                    <i class="fas fa-times"></i> Отклонить
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    logSuccess('Выводы', `Загружено ${withdrawals.length} ожидающих выводов трейдеров`);
+                    
+                    // Добавляем обработчики для кнопок
+                    document.querySelectorAll('.complete-withdrawal').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const withdrawalId = this.dataset.withdrawalId;
+                            await processWithdrawalAction(withdrawalId, 'complete');
+                        });
+                    });
+                    
+                    document.querySelectorAll('.reject-withdrawal').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const withdrawalId = this.dataset.withdrawalId;
+                            await processWithdrawalAction(withdrawalId, 'reject');
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки выводов трейдеров:', error);
+                    tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Ошибка загрузки данных</td></tr>';
+                    logError('Выводы', 'Ошибка загрузки ожидающих выводов трейдеров', error);
+                }
+            });
+
+            // Функция для обработки действий с депозитами трейдеров
+            async function processDepositAction(depositId, action) {
+                const endpoint = action === 'complete' 
+                    ? `/api/admin/trader-deposits/${depositId}/complete` 
+                    : `/api/admin/trader-deposits/${depositId}/reject`;
+                
+                const actionName = action === 'complete' ? 'подтверждения' : 'отклонения';
+                
+                logInfo('Депозиты', `Запрос ${actionName} депозита трейдера ID: ${depositId}`);
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('csrf_token', '{{ csrf_token() }}');
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        showToast(`Депозит трейдера успешно ${action === 'complete' ? 'подтвержден' : 'отклонен'}`, 'success');
+                        logSuccess('Депозиты', `Депозит трейдера ID: ${depositId} успешно ${action === 'complete' ? 'подтвержден' : 'отклонен'}`);
+                        
+                        // Обновляем таблицу
+                        $('#depositsModal').modal('hide');
+                        setTimeout(() => $('#depositsModal').modal('show'), 300);
+                    } else {
+                        const error = await response.text();
+                        throw new Error(error);
+                    }
+                } catch (error) {
+                    showToast(`Ошибка ${actionName} депозита трейдера: ${error.message}`, 'error');
+                    logError('Депозиты', `Ошибка ${actionName} депозита трейдера ID: ${depositId}`, error);
+                }
+            }
+
+            // Функция для обработки действий с выводами трейдеров
+            async function processWithdrawalAction(withdrawalId, action) {
+                const endpoint = action === 'complete' 
+                    ? `/api/admin/trader-withdrawals/${withdrawalId}/complete` 
+                    : `/api/admin/trader-withdrawals/${withdrawalId}/reject`;
+                
+                const actionName = action === 'complete' ? 'подтверждения' : 'отклонения';
+                
+                logInfo('Выводы', `Запрос ${actionName} вывода трейдера ID: ${withdrawalId}`);
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('csrf_token', '{{ csrf_token() }}');
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            showToast(`Вывод трейдера успешно ${action === 'complete' ? 'подтвержден' : 'отклонен'}`, 'success');
+                            logSuccess('Выводы', `Вывод трейдера ID: ${withdrawalId} успешно ${action === 'complete' ? 'подтвержден' : 'отклонен'}`);
+                            
+                            // Обновляем таблицу
+                            $('#withdrawalsModal').modal('hide');
+                            setTimeout(() => $('#withdrawalsModal').modal('show'), 300);
+                            
+                            if (action === 'complete' && result.new_balance !== undefined) {
+                                showToast(`Новый баланс трейдера: ${result.new_balance.toFixed(2)} ₽`, 'info');
+                            }
+                        } else {
+                            throw new Error(result.error || 'Неизвестная ошибка');
+                        }
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка сервера');
+                    }
+                } catch (error) {
+                    showToast(`Ошибка ${actionName} вывода трейдера: ${error.message}`, 'error');
+                    logError('Выводы', `Ошибка ${actionName} вывода трейдера ID: ${withdrawalId}`, error);
+                }
+            }
+
+            // Загрузка данных для модального окна матчинга
+            $('#matchingModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка данных для матчинга транзакций');
+                await loadMatchingData();
+            });
+
+            // Кнопка запуска матчинга
+            document.getElementById('runMatchingBtn').addEventListener('click', async function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Обработка...';
+                logInfo('Матчинг', 'Запуск процесса матчинга транзакций');
+                
+                try {
+                    const response = await fetch('/api/admin/matching/run', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token() }}'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(`Найдено ${result.matches_count} совпадений`, 'success');
+                        logSuccess('Матчинг', `Найдено ${result.matches_count} совпадений`);
+                        await loadMatchingData();
+                    } else {
+                        throw new Error(result.error || 'Ошибка выполнения матчинга');
+                    }
+                } catch (error) {
+                    showToast(`Ошибка: ${error.message}`, 'error');
+                    logError('Матчинг', 'Ошибка выполнения матчинга', error);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-sync me-1"></i>Запустить матчинг';
+                }
+            });
+
+            // Загрузка данных для модального окна настроек
+            $('#settingsModal').on('show.bs.modal', async function() {
+                logInfo('Модальное окно', 'Загрузка настроек платформы');
+                
+                try {
+                    const response = await fetch('/api/admin/settings');
+                    const settings = await response.json();
+                    
+                    document.getElementById('defaultFee').value = settings.default_fee;
+                    document.getElementById('traderFee').value = settings.trader_fee;
+                    document.getElementById('usdRate').value = settings.usd_rate;
+                    document.getElementById('eurRate').value = settings.eur_rate;
+                    document.getElementById('usdtRate').value = settings.usdt_rate;
+                    
+                    logSuccess('Настройки', 'Настройки успешно загружены');
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки настроек:', error);
+                    showToast('Ошибка загрузки настроек', 'error');
+                    logError('Настройки', 'Ошибка загрузки настроек', error);
+                }
+            });
+
+            // Сохранение настроек
+            document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                logInfo('Настройки', 'Сохранение новых настроек');
+                
+                const saveBtn = this.querySelector('button[type="submit"]');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Сохранение...';
+                
+                try {
+                    const settings = {
+                        default_fee: parseFloat(document.getElementById('defaultFee').value),
+                        trader_fee: parseFloat(document.getElementById('traderFee').value),
+                        usd_rate: parseFloat(document.getElementById('usdRate').value),
+                        eur_rate: parseFloat(document.getElementById('eurRate').value),
+                        usdt_rate: parseFloat(document.getElementById('usdtRate').value)
+                    };
+                    
+                    logInfo('Настройки', `Отправка новых настроек: ${JSON.stringify(settings)}`);
+                    
+                    const response = await fetch('/api/admin/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(settings)
+                    });
+                    
+                    if (response.ok) {
+                        showToast('Настройки успешно сохранены', 'success');
+                        $('#settingsModal').modal('hide');
+                        logSuccess('Настройки', 'Настройки успешно сохранены');
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка сохранения настроек');
+                    }
+                } catch (error) {
+                    showToast(`Ошибка: ${error.message}`, 'error');
+                    logError('Настройки', 'Ошибка сохранения настроек', error);
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = 'Сохранить';
+                }
+            });
+        });
+
+        // Функция загрузки данных для матчинга
+        async function loadMatchingData() {
+            logInfo('Матчинг', 'Загрузка данных для матчинга');
+            
+            try {
+                // Загрузка данных для матчинга (депозиты и выводы)
+                const response = await fetch('/api/admin/matching/transactions');
+                const data = await response.json();
+                
+                const deposits = data.deposits || [];
+                const withdrawals = data.withdrawals || [];
+                
+                // Обработка ожидающих депозитов
+                const depositsList = document.getElementById('pendingDepositsList');
+                depositsList.innerHTML = '';
+                
+                if (deposits.length === 0) {
+                    depositsList.innerHTML = '<tr><td colspan="5" class="text-center">Нет ожидающих депозитов</td></tr>';
+                    logInfo('Матчинг', 'Нет ожидающих депозитов');
+                } else {
+                    deposits.forEach(deposit => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${deposit.id}</td>
+                            <td>${deposit.amount.toFixed(2)} ${deposit.currency || 'RUB'}</td>
+                            <td>${deposit.currency || 'RUB'}</td>
+                            <td>${deposit.merchant_email || deposit.merchant_id || 'Неизвестно'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info view-deposit-details" data-deposit-id="${deposit.id}">
+                                    <i class="fas fa-eye"></i> Подробности
+                                </button>
+                            </td>
+                        `;
+                        depositsList.appendChild(row);
+                    });
+                    logInfo('Матчинг', `Загружено ${deposits.length} ожидающих депозитов`);
+                    
+                    // Добавляем обработчики для кнопок просмотра деталей депозитов
+                    document.querySelectorAll('.view-deposit-details').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const depositId = this.dataset.depositId;
+                            logInfo('Матчинг', `Запрос деталей депозита ID: ${depositId}`);
+                            
+                            try {
+                                const response = await fetch(`/api/admin/transactions/${depositId}/details`);
+                                const depositDetails = await response.json();
+                                
+                                // Заполняем модальное окно деталями депозита
+                                document.getElementById('txIdTitle').textContent = `#${depositDetails.id}`;
+                                
+                                const basicInfoHtml = `
+                                    <p><strong>Тип:</strong> ${depositDetails.type}</p>
+                                    <p><strong>Сумма:</strong> ${depositDetails.amount.toFixed(2)} ${depositDetails.currency}</p>
+                                    <p><strong>Статус:</strong> <span class="badge bg-warning">${depositDetails.status}</span></p>
+                                    <p><strong>Дата создания:</strong> ${new Date(depositDetails.created_at).toLocaleString()}</p>
+                                    <p><strong>Пользователь:</strong> ${depositDetails.user_email}</p>
+                                `;
+                                document.getElementById('txBasicInfo').innerHTML = basicInfoHtml;
+                                
+                                const requisitesHtml = depositDetails.requisites ? `
+                                    <p><strong>Метод:</strong> ${depositDetails.method || 'Не указан'}</p>
+                                    <pre>${JSON.stringify(depositDetails.requisites, null, 2)}</pre>
+                                ` : '<p>Реквизиты не указаны</p>';
+                                document.getElementById('txRequisitesInfo').innerHTML = requisitesHtml;
+                                
+                                const receiptHtml = depositDetails.receipt_file ? `
+                                    <p><a href="/uploads/${depositDetails.receipt_file}" target="_blank" class="btn btn-sm btn-primary mb-2">
+                                        <i class="fas fa-download me-1"></i>Скачать чек
+                                    </a></p>
+                                    <iframe src="/uploads/${depositDetails.receipt_file}" width="100%" height="500px"></iframe>
+                                ` : '<p>Чек не загружен</p>';
+                                document.getElementById('txReceiptInfo').innerHTML = receiptHtml;
+                                
+                                // Показываем модальное окно
+                                const modal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+                                modal.show();
+                                
+                                logSuccess('Матчинг', `Детали депозита ID: ${depositId} загружены`);
+                            } catch (error) {
+                                console.error('Ошибка загрузки деталей депозита:', error);
+                                showToast('Ошибка загрузки деталей депозита', 'error');
+                                logError('Матчинг', `Ошибка загрузки деталей депозита ID: ${depositId}`, error);
+                            }
+                        });
+                    });
+                }
+                
+                // Обработка ожидающих выводов
+                const withdrawalsList = document.getElementById('pendingWithdrawalsList');
+                withdrawalsList.innerHTML = '';
+                
+                if (withdrawals.length === 0) {
+                    withdrawalsList.innerHTML = '<tr><td colspan="5" class="text-center">Нет ожидающих выводов</td></tr>';
+                    logInfo('Матчинг', 'Нет ожидающих выводов');
+                } else {
+                    withdrawals.forEach(withdrawal => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${withdrawal.id}</td>
+                            <td>${withdrawal.amount.toFixed(2)} ${withdrawal.currency || 'RUB'}</td>
+                            <td>${withdrawal.currency || 'RUB'}</td>
+                            <td>${withdrawal.merchant_email || withdrawal.merchant_id || 'Неизвестно'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info view-withdrawal-details" data-withdrawal-id="${withdrawal.id}">
+                                    <i class="fas fa-eye"></i> Подробности
+                                </button>
+                            </td>
+                        `;
+                        withdrawalsList.appendChild(row);
+                    });
+                    logInfo('Матчинг', `Загружено ${withdrawals.length} ожидающих выводов`);
+                    
+                    // Добавляем обработчики для кнопок просмотра деталей выводов
+                    document.querySelectorAll('.view-withdrawal-details').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const withdrawalId = this.dataset.withdrawalId;
+                            logInfo('Матчинг', `Запрос деталей вывода ID: ${withdrawalId}`);
+                            
+                            try {
+                                const response = await fetch(`/api/admin/transactions/${withdrawalId}/details`);
+                                const withdrawalDetails = await response.json();
+                                
+                                // Заполняем модальное окно деталями вывода
+                                document.getElementById('txIdTitle').textContent = `#${withdrawalDetails.id}`;
+                                
+                                const basicInfoHtml = `
+                                    <p><strong>Тип:</strong> ${withdrawalDetails.type}</p>
+                                    <p><strong>Сумма:</strong> ${withdrawalDetails.amount.toFixed(2)} ${withdrawalDetails.currency}</p>
+                                    <p><strong>Статус:</strong> <span class="badge bg-warning">${withdrawalDetails.status}</span></p>
+                                    <p><strong>Дата создания:</strong> ${new Date(withdrawalDetails.created_at).toLocaleString()}</p>
+                                    <p><strong>Пользователь:</strong> ${withdrawalDetails.user_email}</p>
+                                `;
+                                document.getElementById('txBasicInfo').innerHTML = basicInfoHtml;
+                                
+                                const requisitesHtml = withdrawalDetails.requisites ? `
+                                    <p><strong>Метод:</strong> ${withdrawalDetails.method || 'Не указан'}</p>
+                                    <pre>${JSON.stringify(withdrawalDetails.requisites, null, 2)}</pre>
+                                ` : '<p>Реквизиты не указаны</p>';
+                                document.getElementById('txRequisitesInfo').innerHTML = requisitesHtml;
+                                
+                                const receiptHtml = withdrawalDetails.receipt_file ? `
+                                    <p><a href="/uploads/${withdrawalDetails.receipt_file}" target="_blank" class="btn btn-sm btn-primary mb-2">
+                                        <i class="fas fa-download me-1"></i>Скачать чек
+                                    </a></p>
+                                    <iframe src="/uploads/${withdrawalDetails.receipt_file}" width="100%" height="500px"></iframe>
+                                ` : '<p>Чек не загружен</p>';
+                                document.getElementById('txReceiptInfo').innerHTML = receiptHtml;
+                                
+                                // Показываем модальное окно
+                                const modal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+                                modal.show();
+                                
+                                logSuccess('Матчинг', `Детали вывода ID: ${withdrawalId} загружены`);
+                            } catch (error) {
+                                console.error('Ошибка загрузки деталей вывода:', error);
+                                showToast('Ошибка загрузки деталей вывода', 'error');
+                                logError('Матчинг', `Ошибка загрузки деталей вывода ID: ${withdrawalId}`, error);
+                            }
+                        });
+                    });
+                }
+                
+                // Загрузка найденных совпадений
+                const matchesResponse = await fetch('/api/admin/matches');
+                const matches = await matchesResponse.json();
+                
+                const matchesList = document.getElementById('matchesList');
+                matchesList.innerHTML = '';
+                
+                if (matches.length === 0) {
+                    matchesList.innerHTML = '<tr><td colspan="8" class="text-center">Нет найденных совпадений</td></tr>';
+                    logInfo('Матчинг', 'Нет найденных совпадений');
+                } else {
+                    matches.forEach(match => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${match.id}</td>
+                            <td>${Array.isArray(match.deposit_ids) ? match.deposit_ids.join(', ') : match.deposit_ids}</td>
+                            <td>${match.withdrawal_id}</td>
+                            <td>${match.withdrawal_amount ? match.withdrawal_amount.toFixed(2) : 'N/A'}</td>
+                            <td>${match.currency || 'RUB'}</td>
+                            <td>${(match.commission * 100).toFixed(2)}%</td>
+                            <td>
+                                <span class="badge bg-${match.status === 'completed' ? 'success' : 'warning'}">
+                                    ${match.status === 'completed' ? 'Завершен' : 'Ожидание'}
+                                </span>
+                            </td>
+                            <td>
+                                ${match.status === 'pending' ? `
+                                <button class="btn btn-sm btn-success confirm-match" data-match-id="${match.id}">
+                                    <i class="fas fa-check"></i> Подтвердить
+                                </button>
+                                ` : ''}
+                            </td>
+                        `;
+                        matchesList.appendChild(row);
+                    });
+                    
+                    logInfo('Матчинг', `Загружено ${matches.length} совпадений`);
+                    
+                    // Обработчики для кнопок подтверждения матчинга
+                    document.querySelectorAll('.confirm-match').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const matchId = this.dataset.matchId;
+                            logInfo('Матчинг', `Подтверждение совпадения ID: ${matchId}`);
+                            
+                            try {
+                                const response = await fetch(`/api/admin/matches/${matchId}/confirm`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token() }}'
+                                    }
+                                });
+                                
+                                if (response.ok) {
+                                    showToast('Матчинг успешно подтвержден', 'success');
+                                    logSuccess('Матчинг', `Совпадение ID: ${matchId} подтверждено`);
+                                    await loadMatchingData();
+                                } else {
+                                    const error = await response.json();
+                                    throw new Error(error.error || 'Ошибка подтверждения матчинга');
+                                }
+                            } catch (error) {
+                                showToast(`Ошибка: ${error.message}`, 'error');
+                                logError('Матчинг', `Ошибка подтверждения совпадения ID: ${matchId}`, error);
+                            }
+                        });
+                    });
+                }
+                
+                logSuccess('Матчинг', 'Данные для матчинга успешно загружены');
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных матчинга:', error);
+                showToast('Ошибка загрузки данных матчинга', 'error');
+                logError('Матчинг', 'Ошибка загрузки данных матчинга', error);
+            }
+        }
+
+        // Функция показа уведомлений
+        function showToast(message, type) {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            
+            const toast = document.createElement('div');
+            toast.className = `toast show align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Автоматическое закрытие через 5 секунд
+            setTimeout(() => {
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.hide();
+                toast.addEventListener('hidden.bs.toast', () => toast.remove());
+            }, 5000);
+        }
+
+        // Дополнительные функции логирования
+        function logInfo(category, message) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-info">[${category}] ${message}</span>
+            `;
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logSuccess(category, message) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-success">[${category}] ${message}</span>
+            `;
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(category, message, error) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let errorDetails = '';
+            if (error instanceof Error) {
+                errorDetails = `${error.message}<br>Stack: ${error.stack}`;
+            } else if (typeof error === 'object') {
+                errorDetails = JSON.stringify(error, null, 2);
+            } else {
+                errorDetails = String(error);
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-error">[${category}] ${message}</span>
+                <div class="log-error-details">${errorDetails}</div>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+    </script>
+    <div id="toast-container"></div>
+</body>
+</html>

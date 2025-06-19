@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Трейдер | Processing Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .nav-link {
+            color: #333;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .badge {
+            font-size: 0.85em;
+        }
+        .balance-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .quick-actions .btn {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        .sidebar {
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar .nav-link {
+            color: #4a5568;
+            border-radius: 5px;
+            margin: 2px 0;
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: #ebf4ff;
+            color: #3b82f6;
+        }
+        
+        .sidebar .nav-link:hover:not(.active) {
+            background-color: #f3f4f6;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+        }
+        
+        .page-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .page-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .badge-status {
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            border-radius: 50rem;
+        }
+        
+        .filter-card {
+            background-color: #f8fafc;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .detail-card {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .detail-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .action-buttons .btn {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .receipt-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-card {
+            border-left: 3px solid;
+        }
+        
+        .stat-card.border-primary {
+            border-left-color: #3b82f6;
+        }
+        
+        .stat-card.border-success {
+            border-left-color: #10b981;
+        }
+        
+        .stat-card.border-info {
+            border-left-color: #06b6d4;
+        }
+        
+        .stat-card.border-warning {
+            border-left-color: #f59e0b;
+        }
+
+        /* Стили для консоли логов */
+        #log-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            border-top: 1px solid #444;
+        }
+
+        #log-console .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        #log-console .log-time {
+            color: #6a9955;
+        }
+
+        #log-console .log-method {
+            color: #569cd6;
+        }
+
+        #log-console .log-url {
+            color: #9cdcfe;
+        }
+
+        #log-console .log-status {
+            color: #b5cea8;
+        }
+
+        #log-console .log-error {
+            color: #f48771;
+        }
+
+        #log-console .log-success {
+            color: #4ec9b0;
+        }
+
+        #log-console .log-info {
+            color: #c586c0;
+        }
+
+        #log-toggle {
+            position: fixed;
+            bottom: 210px;
+            right: 20px;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #1e1e1e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="d-flex">
+    <!-- Sidebar -->
+    <div class="d-flex flex-column flex-shrink-0 p-3 sidebar" style="width: 280px;">
+        <div class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+            <span class="fs-4 fw-bold text-primary">
+                <i class="fas fa-chart-line me-2"></i>Трейдер
+            </span>
+        </div>
+        <hr>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item">
+                <a href="#" class="nav-link active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt me-2"></i> Дашборд
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" data-section="orders">
+                    <i class="fas fa-exchange-alt me-2"></i> Заявки
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" data-section="merchant">
+                    <i class="fas fa-store me-2"></i> Транзакции мерчанта
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" data-section="details">
+                    <i class="fas fa-credit-card me-2"></i> Реквизиты
+                </a>
+            </li>
+            <li>
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home me-2"></i> На главную
+                </a>
+            </li>
+        </ul>
+        <hr>
+        <div class="dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-user-circle me-2"></i>
+                <strong>{{ user.email }}</strong>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Выйти</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 p-4" style="background-color: #f5f7fa;">
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="page-section active">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0"><i class="fas fa-tachometer-alt me-2 text-primary"></i>Дашборд</h2>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card border-primary h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Баланс</h6>
+                                    <h4 class="mb-0" id="balance-value">{{ "%.2f"|format(user.balance) }} ₽</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card border-success h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Активные транзакции</h6>
+                                    <h4 class="mb-0" id="active-transactions-value">{{ merchant_transactions|length }}</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-link p-0" id="viewActiveTransactionsBtn">
+                                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card border-info h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Доход за месяц</h6>
+                                    <h4 class="mb-0" id="monthly-income-value">0 ₽</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-ruble-sign fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card border-warning h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Рейтинг</h6>
+                                    <h4 class="mb-0" id="rating-value">4.8/5</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-star fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold">Активные заявки</h6>
+                            <button class="btn btn-sm btn-primary" id="newOrderBtn">
+                                <i class="fas fa-plus me-1"></i> Новая
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="activeOrders">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Тип</th>
+                                            <th>Сумма</th>
+                                            <th>Статус</th>
+                                            <th>Дата</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in active_orders %}
+                                        <tr>
+                                            <td>{{ order.id }}</td>
+                                            <td>{{ 'Пополнение' if order.type == 'deposit' else 'Вывод' }}</td>
+                                            <td>{{ "%.2f"|format(order.amount) }} ₽</td>
+                                            <td>
+                                                <span class="badge bg-{{ 
+                                                    'success' if order.status == 'completed' 
+                                                    else 'warning' if order.status == 'pending' 
+                                                    else 'danger' 
+                                                }}">
+                                                    {{ order.status }}
+                                                </span>
+                                            </td>
+                                            <td>{{ order.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                            <td class="action-buttons">
+                                                <button class="btn btn-sm btn-outline-primary view-order-btn" data-order-id="{{ order.id }}">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary edit-order-btn" data-order-id="{{ order.id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger delete-order-btn" data-order-id="{{ order.id }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold">Быстрые действия</h6>
+                        </div>
+                        <div class="card-body quick-actions">
+                            <button class="btn btn-success w-100 mb-3" id="enableDepositBtn">
+                                <i class="fas fa-toggle-on me-2"></i> Включить депозиты
+                            </button>
+                            <button class="btn btn-danger w-100 mb-3" id="disableDepositBtn">
+                                <i class="fas fa-toggle-off me-2"></i> Выключить депозиты
+                            </button>
+                            <button class="btn btn-primary w-100" id="addDetailsBtn">
+                                <i class="fas fa-plus-circle me-2"></i> Добавить реквизиты
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Section -->
+        <div id="orders-section" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0"><i class="fas fa-exchange-alt me-2 text-primary"></i>Заявки</h2>
+                <button class="btn btn-primary" id="newOrderBtn2">
+                    <i class="fas fa-plus me-2"></i> Новая заявка
+                </button>
+            </div>
+            
+            <div class="card filter-card mb-4">
+                <div class="card-body">
+                    <form id="ordersFilterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select" name="status">
+                                    <option value="all">Все</option>
+                                    <option value="pending">В ожидании</option>
+                                    <option value="processing">В обработке</option>
+                                    <option value="completed">Завершено</option>
+                                    <option value="failed">Ошибка</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Тип</label>
+                                <select class="form-select" name="type">
+                                    <option value="all">Все</option>
+                                    <option value="deposit">Депозит</option>
+                                    <option value="withdrawal">Вывод</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата с</label>
+                                <input type="date" class="form-control" name="date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата по</label>
+                                <input type="date" class="form-control" name="date_to">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col text-end">
+                                <button type="reset" class="btn btn-outline-secondary me-2">Сбросить</button>
+                                <button type="submit" class="btn btn-primary">Применить</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Список заявок</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Тип</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in all_orders %}
+                                <tr>
+                                    <td>{{ order.id }}</td>
+                                    <td>{{ 'Пополнение' if order.type == 'deposit' else 'Вывод' }}</td>
+                                    <td>{{ "%.2f"|format(order.amount) }} ₽</td>
+                                    <td>
+                                        <span class="badge bg-{{ 
+                                            'success' if order.status == 'completed' 
+                                            else 'warning' if order.status == 'pending' 
+                                            else 'danger' 
+                                        }}">
+                                            {{ order.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ order.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td class="action-buttons">
+                                        <button class="btn btn-sm btn-outline-primary view-order-btn" data-order-id="{{ order.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary edit-order-btn" data-order-id="{{ order.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-order-btn" data-order-id="{{ order.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Merchant Transactions Section -->
+        <div id="merchant-section" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0"><i class="fas fa-store me-2 text-primary"></i>Транзакции мерчанта</h2>
+            </div>
+            
+            <div class="card filter-card mb-4">
+                <div class="card-body">
+                    <form id="merchantFilterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select" name="status">
+                                    <option value="all">Все</option>
+                                    <option value="pending">В ожидании</option>
+                                    <option value="completed">Завершено</option>
+                                    <option value="failed">Ошибка</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата с</label>
+                                <input type="date" class="form-control" name="date_from">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Дата по</label>
+                                <input type="date" class="form-control" name="date_to">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ID транзакции</label>
+                                <input type="text" class="form-control" name="transaction_id" placeholder="Введите ID">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col text-end">
+                                <button type="reset" class="btn btn-outline-secondary me-2">Сбросить</button>
+                                <button type="submit" class="btn btn-primary">Применить</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Список транзакций</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="merchantTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Тип</th>
+                                    <th>Сумма</th>
+                                    <th>Комиссия</th>
+                                    <th>Статус</th>
+                                    <th>Метод</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in merchant_transactions %}
+                                <tr>
+                                    <td>{{ transaction.id }}</td>
+                                    <td>{{ 'Пополнение' if transaction.type == 'deposit' else 'Вывод' }}</td>
+                                    <td>{{ "%.2f"|format(transaction.amount) }} ₽</td>
+                                    <td>{{ "%.2f"|format(transaction.fee|default(0)) }} ₽</td>
+                                    <td>
+                                        <span class="badge bg-{{ 
+                                            'success' if transaction.status == 'completed' 
+                                            else 'warning' if transaction.status == 'pending' 
+                                            else 'danger' 
+                                        }}">
+                                            {{ transaction.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ transaction.method }}</td>
+                                    <td>{{ transaction.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
+                                    <td class="action-buttons">
+                                        <button class="btn btn-sm btn-outline-primary view-merchant-btn" data-transaction-id="{{ transaction.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if transaction.status == 'pending' %}
+                                        <button class="btn btn-sm btn-success take-transaction-btn" data-transaction-id="{{ transaction.id }}">
+                                            <i class="fas fa-hand-paper"></i> Взять
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Section -->
+        <div id="details-section" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0"><i class="fas fa-credit-card me-2 text-primary"></i>Реквизиты</h2>
+                <button class="btn btn-primary" id="addDetailsBtn2" data-bs-toggle="modal" data-bs-target="#addDetailsModal">
+                    <i class="fas fa-plus me-2"></i> Добавить
+                </button>
+            </div>
+            
+            <div class="row">
+                {% for detail in details %}
+                <div class="col-md-6 mb-4">
+                    <div class="card detail-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">{{ detail.type }}</h5>
+                                    <p class="card-text text-muted mb-1">
+                                        {{ detail.details }}
+                                    </p>
+                                    <small class="text-muted">Добавлено: {{ detail.created_at|datetimeformat('%d.%m.%Y') }}</small>
+                                </div>
+                                <span class="badge bg-{{ 'success' if detail.status == 'active' else 'warning' }}">
+                                    {{ 'Активен' if detail.status == 'active' else 'На проверке' }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-sm btn-outline-danger me-2 delete-detail-btn" data-detail-id="{{ detail.id }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary edit-detail-btn" data-detail-id="{{ detail.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- New Order Modal -->
+    <div class="modal fade" id="newOrderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая заявка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="newOrderForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Тип заявки</label>
+                            <select class="form-select" name="type" required>
+                                <option value="deposit">Депозит</option>
+                                <option value="withdrawal">Вывод</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Сумма (₽)</label>
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Метод оплаты</label>
+                            <select class="form-select" name="method" required>
+                                <option value="bank_account">Банковский счет</option>
+                                <option value="card">Банковская карта</option>
+                                <option value="crypto">Криптовалюта</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Реквизиты</label>
+                            <select class="form-select" name="details_id" required>
+                                {% for detail in details %}
+                                <option value="{{ detail.id }}">{{ detail.type }} ({{ detail.details }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Детали заявки #<span id="orderDetailId"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <table class="table table-sm">
+                                <tr><th>Тип:</th><td id="orderDetailType"></td></tr>
+                                <tr><th>Сумма:</th><td id="orderDetailAmount"></td></tr>
+                                <tr><th>Метод:</th><td id="orderDetailMethod"></td></tr>
+                                <tr><th>Статус:</th><td id="orderDetailStatus"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Дополнительно</h6>
+                            <table class="table table-sm">
+                                <tr><th>Создана:</th><td id="orderDetailCreated"></td></tr>
+                                <tr><th>Обновлена:</th><td id="orderDetailUpdated"></td></tr>
+                                <tr><th>Реквизиты:</th><td id="orderDetailDetails"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4" id="orderActions">
+                        <button class="btn btn-success me-2" id="completeOrderBtn">
+                            <i class="fas fa-check me-2"></i> Завершить
+                        </button>
+                        <button class="btn btn-danger" id="cancelOrderBtn">
+                            <i class="fas fa-times me-2"></i> Отменить
+                        </button>
+                    </div>
+                    
+                    <h6 class="mb-3">История изменений</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Событие</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderHistory">
+                            <!-- Данные будут загружаться динамически -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merchant Transaction Details Modal -->
+    <div class="modal fade" id="merchantDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Детали транзакции #<span id="merchantDetailId"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <table class="table table-sm">
+                                <tr><th>Тип:</th><td id="merchantDetailType"></td></tr>
+                                <tr><th>Сумма:</th><td id="merchantDetailAmount"></td></tr>
+                                <tr><th>Комиссия:</th><td id="merchantDetailFee"></td></tr>
+                                <tr><th>Метод:</th><td id="merchantDetailMethod"></td></tr>
+                                <tr><th>Статус:</th><td id="merchantDetailStatus"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Дополнительно</h6>
+                            <table class="table table-sm">
+                                <tr><th>Создана:</th><td id="merchantDetailCreated"></td></tr>
+                                <tr><th>Обновлена:</th><td id="merchantDetailUpdated"></td></tr>
+                                <tr><th>ID мерчанта:</th><td id="merchantDetailMerchantId"></td></tr>
+                                <tr><th>ID трейдера:</th><td id="merchantDetailTraderId"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Реквизиты мерчанта</h6>
+                            <div id="merchantRequisitesDetails">
+                                <!-- Здесь будут отображаться реквизиты мерчанта -->
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Ваши реквизиты</h6>
+                            <div id="traderRequisitesDetails">
+                                <!-- Здесь будут отображаться реквизиты трейдера -->
+                            </div>
+                            <button class="btn btn-sm btn-primary mt-2" id="addRequisitesBtn">
+                                <i class="fas fa-plus me-1"></i> Назначить реквизиты
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4" id="merchantActions">
+                        <button class="btn btn-primary me-2" id="completeTransactionBtn">
+                            <i class="fas fa-check me-2"></i> Выполнено
+                        </button>
+                        <input type="file" id="receiptUpload" style="display: none;" accept=".pdf,.jpg,.png">
+                        <button class="btn btn-info" id="uploadReceiptBtn">
+                            <i class="fas fa-upload me-2"></i> Загрузить чек
+                        </button>
+                    </div>
+                    
+                    <div id="receiptPreviewContainer" style="display: none;">
+                        <h6 class="mb-3">Загруженный чек</h6>
+                        <img id="receiptPreview" class="receipt-preview" src="" alt="Превью чека">
+                    </div>
+                    
+                    <h6 class="mb-3">История изменений</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Событие</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody id="merchantHistory">
+                            <!-- Данные будут загружаться динамически -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Details Modal -->
+    <div class="modal fade" id="addDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Добавить реквизиты</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addDetailsForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Тип реквизитов</label>
+                            <select class="form-select" name="type" id="detailTypeSelect" required>
+                                <option value="">Выберите тип</option>
+                                <option value="bank_account">Банковский счет</option>
+                                <option value="card">Банковская карта</option>
+                                <option value="crypto">Криптовалютный кошелек</option>
+                            </select>
+                        </div>
+                        
+                        <div id="bankAccountFields" class="detail-fields">
+                            <div class="mb-3">
+                                <label class="form-label">Номер счета</label>
+                                <input type="text" class="form-control" name="account_number" placeholder="40817810099910004312">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">БИК</label>
+                                <input type="text" class="form-control" name="bik" placeholder="044525225">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Имя владельца</label>
+                                <input type="text" class="form-control" name="owner_name" placeholder="Иванов Иван Иванович">
+                            </div>
+                        </div>
+                        
+                        <div id="cardFields" class="detail-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Номер карты</label>
+                                <input type="text" class="form-control" name="card_number" placeholder="1234 5678 9012 3456">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Имя владельца</label>
+                                <input type="text" class="form-control" name="card_owner" placeholder="IVAN IVANOV">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Срок действия</label>
+                                <input type="text" class="form-control" name="card_expiry" placeholder="MM/YY">
+                            </div>
+                        </div>
+                        
+                        <div id="cryptoFields" class="detail-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Адрес кошелька</label>
+                                <input type="text" class="form-control" name="wallet_address" placeholder="0x71C7656EC7ab88b098defB751B7401B5f6d8976F">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Тип криптовалюты</label>
+                                <select class="form-select" name="crypto_type">
+                                    <option value="BTC">Bitcoin (BTC)</option>
+                                    <option value="ETH">Ethereum (ETH)</option>
+                                    <option value="USDT">Tether (USDT)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Добавить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить эти реквизиты? Это действие нельзя отменить.</p>
+                    <input type="hidden" id="detailIdToDelete">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Консоль для логов -->
+    <button id="log-toggle" title="Показать/скрыть логи">
+        <i class="fas fa-terminal"></i>
+    </button>
+    <div id="log-console"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Логирование всех запросов
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const startTime = new Date();
+            let method = 'GET';
+            let url = args[0];
+            
+            if (args[1]) {
+                method = args[1].method || 'GET';
+                url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            }
+            
+            logRequest(method, url, args[1] ? args[1].body : null);
+            
+            try {
+                const response = await originalFetch.apply(this, args);
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                
+                // Клонируем response для чтения body без потребления оригинального потока
+                const clonedResponse = response.clone();
+                let responseData = null;
+                
+                try {
+                    responseData = await clonedResponse.json();
+                } catch (e) {
+                    // Если не JSON, попробуем как текст
+                    try {
+                        responseData = await clonedResponse.text();
+                    } catch (e) {
+                        responseData = '[Не удалось прочитать ответ]';
+                    }
+                }
+                
+                logResponse(method, url, response.status, duration, responseData);
+                return response;
+            } catch (error) {
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                logError(method, url, error, duration);
+                throw error;
+            }
+        };
+
+        // Функции логирования
+        function logRequest(method, url, body) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let bodyInfo = '';
+            if (body) {
+                try {
+                    const parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
+                    bodyInfo = `<span class="log-info">Body: ${JSON.stringify(parsedBody, null, 2)}</span>`;
+                } catch (e) {
+                    bodyInfo = `<span class="log-info">Body: ${body}</span>`;
+                }
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                ${bodyInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logResponse(method, url, status, duration, data) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let dataInfo = '';
+            if (data) {
+                dataInfo = `<span class="log-info">Response: ${JSON.stringify(data, null, 2)}</span>`;
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-status">${status}</span>
+                <span class="log-success">(${duration}ms)</span>
+                ${dataInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(method, url, error, duration) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let errorDetails = '';
+            if (error instanceof Error) {
+                errorDetails = `${error.message}<br>Stack: ${error.stack}`;
+            } else if (typeof error === 'object') {
+                errorDetails = JSON.stringify(error, null, 2);
+            } else {
+                errorDetails = String(error);
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-error">ERROR: ${error.message}</span>
+                <span class="log-error">(${duration}ms)</span>
+                <div class="log-error-details">${errorDetails}</div>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function scrollLogsToBottom() {
+            const console = document.getElementById('log-console');
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Переключение консоли логов
+        document.getElementById('log-toggle').addEventListener('click', function() {
+            const console = document.getElementById('log-console');
+            if (console.style.display === 'block') {
+                console.style.display = 'none';
+            } else {
+                console.style.display = 'block';
+            }
+        });
+
+        // Дополнительные функции логирования
+        function logInfo(category, message) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-info">[${category}] ${message}</span>
+            `;
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logSuccess(category, message) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-success">[${category}] ${message}</span>
+            `;
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(category, message, error) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let errorDetails = '';
+            if (error instanceof Error) {
+                errorDetails = `${error.message}<br>Stack: ${error.stack}`;
+            } else if (typeof error === 'object') {
+                errorDetails = JSON.stringify(error, null, 2);
+            } else {
+                errorDetails = String(error);
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-error">[${category}] ${message}</span>
+                <div class="log-error-details">${errorDetails}</div>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            logInfo('Инициализация', 'Загрузка панели трейдера');
+            
+            // Навигация между разделами
+            document.querySelectorAll('.nav-link[data-section]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Убираем активный класс у всех элементов меню
+                    document.querySelectorAll('.nav-link').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    
+                    // Добавляем активный класс текущему элементу
+                    this.classList.add('active');
+                    
+                    // Скрываем все разделы
+                    document.querySelectorAll('.page-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Показываем выбранный раздел
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    document.getElementById(sectionId).classList.add('active');
+                    
+                    logInfo('Навигация', `Переход в раздел: ${this.getAttribute('data-section')}`);
+                });
+            });
+            
+            // Инициализация DataTables
+            $('#ordersTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json"
+                },
+                order: [[4, 'desc']]
+            });
+
+            $('#merchantTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json"
+                },
+                order: [[6, 'desc']]
+            });
+            
+            logInfo('DataTables', 'Таблицы инициализированы');
+            
+            // Переключение полей для разных типов реквизитов
+            document.getElementById('detailTypeSelect').addEventListener('change', function() {
+                document.querySelectorAll('.detail-fields').forEach(fields => {
+                    fields.style.display = 'none';
+                });
+                
+                const type = this.value;
+                if (type === 'bank_account') {
+                    document.getElementById('bankAccountFields').style.display = 'block';
+                } else if (type === 'card') {
+                    document.getElementById('cardFields').style.display = 'block';
+                } else if (type === 'crypto') {
+                    document.getElementById('cryptoFields').style.display = 'block';
+                }
+                
+                logInfo('Реквизиты', `Выбран тип реквизитов: ${type}`);
+            });
+            
+            // Кнопки для открытия модального окна новой заявки
+            document.getElementById('newOrderBtn').addEventListener('click', function() {
+                new bootstrap.Modal(document.getElementById('newOrderModal')).show();
+                logInfo('Заявки', 'Открыто модальное окно новой заявки');
+            });
+            
+            document.getElementById('newOrderBtn2').addEventListener('click', function() {
+                new bootstrap.Modal(document.getElementById('newOrderModal')).show();
+                logInfo('Заявки', 'Открыто модальное окно новой заявки');
+            });
+            
+            // Кнопки для открытия модального окна добавления реквизитов
+            document.getElementById('addDetailsBtn').addEventListener('click', function() {
+                document.getElementById('addDetailsForm').reset();
+                document.getElementById('addDetailsModal').querySelector('.modal-title').textContent = 'Добавить реквизиты';
+                if (document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]')) {
+                    document.getElementById('addDetailsForm').removeChild(document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]'));
+                }
+                new bootstrap.Modal(document.getElementById('addDetailsModal')).show();
+                logInfo('Реквизиты', 'Открыто модальное окно добавления реквизитов');
+            });
+            
+            document.getElementById('addDetailsBtn2').addEventListener('click', function() {
+                document.getElementById('addDetailsForm').reset();
+                document.getElementById('addDetailsModal').querySelector('.modal-title').textContent = 'Добавить реквизиты';
+                if (document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]')) {
+                    document.getElementById('addDetailsForm').removeChild(document.getElementById('addDetailsForm').querySelector('input[name="detail_id"]'));
+                }
+                new bootstrap.Modal(document.getElementById('addDetailsModal')).show();
+                logInfo('Реквизиты', 'Открыто модальное окно добавления реквизитов');
+            });
+            
+            // Просмотр деталей заявки
+            document.querySelectorAll('.view-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    logInfo('Заявки', `Просмотр деталей заявки ID: ${orderId}`);
+                    viewOrderDetails(orderId);
+                });
+            });
+
+            // Редактирование заявки
+            document.querySelectorAll('.edit-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    logInfo('Заявки', `Редактирование заявки ID: ${orderId}`);
+                    loadOrderForEdit(orderId);
+                });
+            });
+
+            // Удаление заявки
+            document.querySelectorAll('.delete-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    logInfo('Заявки', `Удаление заявки ID: ${orderId}`);
+                    deleteOrder(orderId);
+                });
+            });
+
+            // Просмотр деталей транзакции мерчанта
+            document.querySelectorAll('.view-merchant-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const transactionId = this.getAttribute('data-transaction-id');
+                    logInfo('Транзакции', `Просмотр деталей транзакции ID: ${transactionId}`);
+                    await viewMerchantDetails(transactionId);
+                });
+            });
+
+            // Принятие транзакции в работу
+            document.querySelectorAll('.take-transaction-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const transactionId = this.getAttribute('data-transaction-id');
+                    logInfo('Транзакции', `Принятие транзакции в работу ID: ${transactionId}`);
+                    takeTransaction(transactionId);
+                });
+            });
+
+            // Загрузка чека
+            document.getElementById('uploadReceiptBtn').addEventListener('click', function() {
+                document.getElementById('receiptUpload').click();
+                logInfo('Транзакции', 'Открыт диалог выбора файла для загрузки чека');
+            });
+
+            document.getElementById('receiptUpload').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    logInfo('Транзакции', `Выбран файл для загрузки: ${e.target.files[0].name}`);
+                    uploadReceipt(currentTransactionId, e.target.files[0]);
+                }
+            });
+
+            // Назначение реквизитов
+            document.getElementById('addRequisitesBtn').addEventListener('click', function() {
+                logInfo('Транзакции', `Назначение реквизитов для транзакции ID: ${currentTransactionId}`);
+                assignDetailsToTransaction(currentTransactionId);
+            });
+
+            // Завершение транзакции
+            document.getElementById('completeTransactionBtn').addEventListener('click', function() {
+                logInfo('Транзакции', `Завершение транзакции ID: ${currentTransactionId}`);
+                completeTransaction(currentTransactionId);
+            });
+            
+            // Подтверждение удаления реквизитов
+            document.querySelectorAll('.delete-detail-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const detailId = this.getAttribute('data-detail-id');
+                    document.getElementById('detailIdToDelete').value = detailId;
+                    new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+                    logInfo('Реквизиты', `Подтверждение удаления реквизитов ID: ${detailId}`);
+                });
+            });
+
+            document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+                const detailId = document.getElementById('detailIdToDelete').value;
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                
+                try {
+                    logInfo('Реквизиты', `Удаление реквизитов ID: ${detailId}`);
+                    
+                    const response = await fetch(`/api/trader/details/${detailId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка удаления');
+                    }
+                    
+                    logSuccess('Реквизиты', `Реквизиты ID: ${detailId} успешно удалены`);
+                    
+                    Swal.fire('Успех!', 'Реквизиты удалены', 'success').then(() => {
+                        location.reload();
+                    });
+                } catch (error) {
+                    logError('Реквизиты', `Ошибка удаления реквизитов ID: ${detailId}`, error);
+                    Swal.fire('Ошибка!', error.message, 'error');
+                } finally {
+                    bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+                }
+            });
+            
+            // Редактирование реквизитов
+            document.querySelectorAll('.edit-detail-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const detailId = this.getAttribute('data-detail-id');
+                    logInfo('Реквизиты', `Редактирование реквизитов ID: ${detailId}`);
+                    editDetail(detailId);
+                });
+            });
+            
+            // Включение/выключение депозитов
+            document.getElementById('enableDepositBtn').addEventListener('click', function() {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                logInfo('Настройки', 'Включение депозитов');
+                
+                fetch('/api/trader/deposits/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ enable: true })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка включения депозитов');
+                    return response.json();
+                })
+                .then(() => {
+                    logSuccess('Настройки', 'Депозиты успешно включены');
+                    Swal.fire('Успех!', 'Депозиты включены', 'success');
+                })
+                .catch(error => {
+                    logError('Настройки', 'Ошибка включения депозитов', error);
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+            
+            document.getElementById('disableDepositBtn').addEventListener('click', function() {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                logInfo('Настройки', 'Выключение депозитов');
+                
+                fetch('/api/trader/deposits/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ enable: false })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка выключения депозитов');
+                    return response.json();
+                })
+                .then(() => {
+                    logSuccess('Настройки', 'Депозиты успешно выключены');
+                    Swal.fire('Успех!', 'Депозиты выключены', 'success');
+                })
+                .catch(error => {
+                    logError('Настройки', 'Ошибка выключения депозитов', error);
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+            
+            // Отправка формы новой заявки
+            document.getElementById('newOrderForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    type: this.elements.type.value,
+                    amount: parseFloat(this.elements.amount.value),
+                    method: this.elements.method.value,
+                    details_id: this.elements.details_id.value
+                };
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                logInfo('Заявки', `Создание новой заявки: ${JSON.stringify(formData)}`);
+                
+                fetch('/api/trader/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка создания заявки');
+                    return response.json();
+                })
+                .then(data => {
+                    logSuccess('Заявки', `Заявка успешно создана, ID: ${data.id}`);
+                    Swal.fire('Успех!', 'Заявка создана', 'success').then(() => {
+                        location.reload();
+                    });
+                })
+                .catch(error => {
+                    logError('Заявки', 'Ошибка создания заявки', error);
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+            
+            // Отправка формы добавления/редактирования реквизитов
+            document.getElementById('addDetailsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    type: this.elements.type.value,
+                    account_number: this.elements.account_number?.value,
+                    bik: this.elements.bik?.value,
+                    owner_name: this.elements.owner_name?.value,
+                    card_number: this.elements.card_number?.value,
+                    card_owner: this.elements.card_owner?.value,
+                    card_expiry: this.elements.card_expiry?.value,
+                    wallet_address: this.elements.wallet_address?.value,
+                    crypto_type: this.elements.crypto_type?.value
+                };
+                
+                const detailId = this.elements.detail_id?.value;
+                const method = detailId ? 'PUT' : 'POST';
+                const url = detailId ? `/api/trader/details/${detailId}` : '/api/trader/details';
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                logInfo('Реквизиты', `${method} запрос для реквизитов: ${JSON.stringify(formData)}`);
+                
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка сохранения реквизитов');
+                    return response.json();
+                })
+                .then((data) => {
+                    logSuccess('Реквизиты', `Реквизиты успешно сохранены, ID: ${data.id || detailId}`);
+                    Swal.fire('Успех!', 'Реквизиты сохранены', 'success').then(() => {
+                        location.reload();
+                    });
+                })
+                .catch(error => {
+                    logError('Реквизиты', 'Ошибка сохранения реквизитов', error);
+                    Swal.fire('Ошибка!', error.message, 'error');
+                });
+            });
+
+            // Просмотр активных транзакций
+            document.getElementById('viewActiveTransactionsBtn').addEventListener('click', function() {
+                logInfo('Транзакции', 'Загрузка активных транзакций');
+                loadActiveTransactions();
+            });
+
+            // Сохранение изменений заявки
+            document.getElementById('saveOrderBtn').addEventListener('click', function() {
+                logInfo('Заявки', `Сохранение изменений заявки ID: ${currentOrderId}`);
+                saveOrderChanges();
+            });
+
+            // Удаление заявки
+            document.getElementById('deleteOrderBtn').addEventListener('click', function() {
+                logInfo('Заявки', `Удаление заявки ID: ${currentOrderId}`);
+                deleteOrder(currentOrderId);
+            });
+        });
+
+        // Глобальные переменные для хранения текущих ID
+        let currentTransactionId = null;
+        let currentOrderId = null;
+
+        // Функция просмотра деталей заявки
+        function viewOrderDetails(orderId) {
+            logInfo('Заявки', `Загрузка деталей заявки ID: ${orderId}`);
+            
+            fetch(`/api/trader/orders/${orderId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки данных');
+                return response.json();
+            })
+            .then(order => {
+                logSuccess('Заявки', `Данные заявки ID: ${orderId} успешно загружены`);
+                
+                document.getElementById('orderDetailId').textContent = order.id;
+                document.getElementById('orderDetailType').textContent = order.type === 'deposit' ? 'Депозит' : 'Вывод';
+                document.getElementById('orderDetailAmount').textContent = order.amount.toFixed(2) + ' ₽';
+                document.getElementById('orderDetailMethod').textContent = order.method;
+                document.getElementById('orderDetailStatus').textContent = 
+                    order.status === 'completed' ? 'Завершено' : 
+                    order.status === 'pending' ? 'В ожидании' : 
+                    'Ошибка';
+                document.getElementById('orderDetailCreated').textContent = new Date(order.created_at).toLocaleString();
+                document.getElementById('orderDetailUpdated').textContent = order.updated_at ? 
+                    new Date(order.updated_at).toLocaleString() : 'Нет данных';
+                document.getElementById('orderDetailDetails').textContent = order.details || 'Нет данных';
+
+                // Показываем/скрываем кнопки действий в зависимости от статуса
+                const actionsDiv = document.getElementById('orderActions');
+                if (order.status === 'completed' || order.status === 'failed') {
+                    actionsDiv.style.display = 'none';
+                } else {
+                    actionsDiv.style.display = 'block';
+                    
+                    // Обновляем обработчики для кнопок
+                    document.getElementById('completeOrderBtn').onclick = () => {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                        logInfo('Заявки', `Завершение заявки ID: ${orderId}`);
+                        
+                        fetch(`/api/trader/orders/${orderId}/complete`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Ошибка завершения заявки');
+                            return response.json();
+                        })
+                        .then(() => {
+                            logSuccess('Заявки', `Заявка ID: ${orderId} успешно завершена`);
+                            Swal.fire('Успех!', 'Заявка завершена', 'success').then(() => {
+                                location.reload();
+                            });
+                        })
+                        .catch(error => {
+                            logError('Заявки', `Ошибка завершения заявки ID: ${orderId}`, error);
+                            Swal.fire('Ошибка!', error.message, 'error');
+                        });
+                    };
+
+                    document.getElementById('cancelOrderBtn').onclick = () => {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                        logInfo('Заявки', `Отмена заявки ID: ${orderId}`);
+                        
+                        fetch(`/api/trader/orders/${orderId}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Ошибка отмены заявки');
+                            return response.json();
+                        })
+                        .then(() => {
+                            logSuccess('Заявки', `Заявка ID: ${orderId} успешно отменена`);
+                            Swal.fire('Успех!', 'Заявка отменена', 'success').then(() => {
+                                location.reload();
+                            });
+                        })
+                        .catch(error => {
+                            logError('Заявки', `Ошибка отмены заявки ID: ${orderId}`, error);
+                            Swal.fire('Ошибка!', error.message, 'error');
+                        });
+                    };
+                }
+
+                new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+            })
+            .catch(error => {
+                logError('Заявки', `Ошибка загрузки деталей заявки ID: ${orderId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            });
+        }
+
+        // Функция для редактирования реквизитов
+        function editDetail(detailId) {
+            logInfo('Реквизиты', `Загрузка данных реквизитов ID: ${detailId} для редактирования`);
+            
+            fetch(`/api/trader/details/${detailId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки данных');
+                return response.json();
+            })
+            .then(detail => {
+                logSuccess('Реквизиты', `Данные реквизитов ID: ${detailId} успешно загружены`);
+                
+                // Заполняем форму данными
+                const modal = document.getElementById('addDetailsModal');
+                const form = document.getElementById('addDetailsForm');
+                
+                // Сбрасываем форму
+                form.reset();
+                
+                // Устанавливаем тип
+                form.elements.type.value = detail.type;
+                
+                // Показываем соответствующие поля
+                document.querySelectorAll('.detail-fields').forEach(fields => {
+                    fields.style.display = 'none';
+                });
+                
+                if (detail.type === 'bank_account') {
+                    document.getElementById('bankAccountFields').style.display = 'block';
+                    // Парсим данные из строки
+                    const details = detail.details.split(', ');
+                    form.elements.account_number.value = details[0].replace('Счет: ', '');
+                    form.elements.bik.value = details[1].replace('БИК: ', '');
+                    form.elements.owner_name.value = details[2].replace('Владелец: ', '');
+                } else if (detail.type === 'card') {
+                    document.getElementById('cardFields').style.display = 'block';
+                    const details = detail.details.split(', ');
+                    form.elements.card_number.value = details[0].replace('Карта: ', '');
+                    form.elements.card_owner.value = details[1].replace('Владелец: ', '');
+                    form.elements.card_expiry.value = details[2].replace('Срок: ', '');
+                } else if (detail.type === 'crypto') {
+                    document.getElementById('cryptoFields').style.display = 'block';
+                    const details = detail.details.split(', ');
+                    form.elements.wallet_address.value = details[0].replace('Адрес: ', '');
+                    form.elements.crypto_type.value = details[1].replace('Тип: ', '');
+                }
+                
+                // Изменяем заголовок модального окна
+                modal.querySelector('.modal-title').textContent = 'Редактировать реквизиты';
+                
+                // Добавляем скрытое поле с ID реквизитов
+                if (!form.querySelector('input[name="detail_id"]')) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'detail_id';
+                    input.value = detailId;
+                    form.appendChild(input);
+                } else {
+                    form.querySelector('input[name="detail_id"]').value = detailId;
+                }
+                
+                // Показываем модальное окно
+                new bootstrap.Modal(modal).show();
+            })
+            .catch(error => {
+                logError('Реквизиты', `Ошибка загрузки реквизитов ID: ${detailId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            });
+        }
+
+        // Функция просмотра деталей транзакции мерчанта
+        async function viewMerchantDetails(transactionId) {
+            currentTransactionId = transactionId;
+            logInfo('Транзакции', `Загрузка деталей транзакции ID: ${transactionId}`);
+            
+            try {
+                const response = await fetch(`/api/trader/merchant-transactions/${transactionId}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Ошибка загрузки данных транзакции');
+                }
+                
+                const transaction = await response.json();
+                logSuccess('Транзакции', `Данные транзакции ID: ${transactionId} успешно загружены`);
+                
+                // Заполняем модальное окно
+                document.getElementById('merchantDetailId').textContent = transaction.id;
+                document.getElementById('merchantDetailType').textContent = transaction.type === 'deposit' ? 'Пополнение' : 'Вывод';
+                document.getElementById('merchantDetailAmount').textContent = `${transaction.amount.toFixed(2)} ₽`;
+                document.getElementById('merchantDetailFee').textContent = `${(transaction.fee || 0).toFixed(2)} ₽`;
+                document.getElementById('merchantDetailMethod').textContent = transaction.method;
+                document.getElementById('merchantDetailStatus').textContent = 
+                    transaction.status === 'completed' ? 'Завершено' : 
+                    transaction.status === 'pending' ? 'В ожидании' : 'Ошибка';
+                document.getElementById('merchantDetailCreated').textContent = 
+                    new Date(transaction.created_at).toLocaleString();
+                document.getElementById('merchantDetailUpdated').textContent = 
+                    transaction.updated_at ? new Date(transaction.updated_at).toLocaleString() : 'Нет данных';
+                document.getElementById('merchantDetailMerchantId').textContent = 
+                    transaction.merchant_id || 'Нет данных';
+                document.getElementById('merchantDetailTraderId').textContent = 
+                    transaction.trader_id || 'Не назначен';
+
+                // Заполняем реквизиты мерчанта
+                const merchantRequisitesDiv = document.getElementById('merchantRequisitesDetails');
+                if (transaction.merchant_requisites) {
+                    merchantRequisitesDiv.innerHTML = formatRequisites(transaction.merchant_requisites);
+                } else {
+                    merchantRequisitesDiv.innerHTML = '<p>Реквизиты мерчанта не указаны</p>';
+                }
+                
+                // Заполняем реквизиты трейдера
+                const traderRequisitesDiv = document.getElementById('traderRequisitesDetails');
+                const addRequisitesBtn = document.getElementById('addRequisitesBtn');
+                
+                if (transaction.trader_requisites) {
+                    traderRequisitesDiv.innerHTML = formatRequisites(transaction.trader_requisites);
+                    addRequisitesBtn.style.display = 'none';
+                } else {
+                    traderRequisitesDiv.innerHTML = '<p>Реквизиты не назначены</p>';
+                    addRequisitesBtn.style.display = 'block';
+                }
+
+                // Показываем загруженный чек, если есть
+                const receiptContainer = document.getElementById('receiptPreviewContainer');
+                const receiptPreview = document.getElementById('receiptPreview');
+                if (transaction.receipt_file) {
+                    receiptPreview.src = `/uploads/${transaction.receipt_file}`;
+                    receiptContainer.style.display = 'block';
+                } else {
+                    receiptContainer.style.display = 'none';
+                }
+
+                // Показываем/скрываем кнопки действий
+                const actionsDiv = document.getElementById('merchantActions');
+                if (transaction.status === 'completed' || transaction.status === 'failed') {
+                    actionsDiv.style.display = 'none';
+                } else {
+                    actionsDiv.style.display = 'block';
+                }
+
+                new bootstrap.Modal(document.getElementById('merchantDetailsModal')).show();
+            } catch (error) {
+                logError('Транзакции', `Ошибка загрузки транзакции ID: ${transactionId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            }
+        }
+
+        // Функция форматирования реквизитов для отображения
+        function formatRequisites(requisites) {
+            if (!requisites) return '';
+            
+            if (requisites.type === 'bank_account') {
+                return `
+                    <p><strong>Тип:</strong> Банковский счет</p>
+                    <p><strong>Номер счета:</strong> ${requisites.account_number || 'Не указан'}</p>
+                    <p><strong>БИК:</strong> ${requisites.bik || 'Не указан'}</p>
+                    <p><strong>Владелец:</strong> ${requisites.owner_name || 'Не указан'}</p>
+                `;
+            } else if (requisites.type === 'card') {
+                return `
+                    <p><strong>Тип:</strong> Банковская карта</p>
+                    <p><strong>Номер карты:</strong> ${requisites.card_number || 'Не указан'}</p>
+                    <p><strong>Держатель:</strong> ${requisites.card_owner || 'Не указан'}</p>
+                    <p><strong>Срок действия:</strong> ${requisites.card_expiry || 'Не указан'}</p>
+                `;
+            } else if (requisites.type === 'crypto') {
+                return `
+                    <p><strong>Тип:</strong> Криптокошелек</p>
+                    <p><strong>Адрес:</strong> ${requisites.wallet_address || 'Не указан'}</p>
+                    <p><strong>Валюта:</strong> ${requisites.crypto_type || 'Не указана'}</p>
+                `;
+            }
+            
+            return '<p>Реквизиты в неизвестном формате</p>';
+        }
+
+        // Функция принятия транзакции в работу
+        async function takeTransaction(transactionId) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+            logInfo('Транзакции', `Принятие транзакции в работу ID: ${transactionId}`);
+            
+            try {
+                const response = await fetch(`/api/trader/transactions/${transactionId}/take`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Ошибка принятия транзакции');
+                }
+                
+                logSuccess('Транзакции', `Транзакция ID: ${transactionId} успешно принята в работу`);
+                Swal.fire('Успех!', 'Транзакция принята в работу', 'success').then(() => {
+                    location.reload();
+                });
+            } catch (error) {
+                logError('Транзакции', `Ошибка принятия транзакции ID: ${transactionId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            }
+        }
+
+        // Функция загрузки активных транзакций
+        async function loadActiveTransactions() {
+            try {
+                const response = await fetch('/api/trader/active-transactions');
+                const transactions = await response.json();
+                
+                if (!transactions || transactions.length === 0) {
+                    return Swal.fire({
+                        title: 'Нет активных транзакций',
+                        icon: 'info'
+                    });
+                }
+
+                // Создаем таблицу со всеми транзакциями
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Тип</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                transactions.forEach(tx => {
+                    html += `
+                        <tr>
+                            <td>${tx.id}</td>
+                            <td>${tx.type === 'deposit' ? 'Пополнение' : 'Вывод'}</td>
+                            <td>${tx.amount.toFixed(2)} ₽</td>
+                            <td><span class="badge bg-warning">${tx.status}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-primary view-tx-btn" data-id="${tx.id}">
+                                    <i class="fas fa-eye"></i> Просмотр
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table></div>`;
+
+                const { isDismissed } = await Swal.fire({
+                    title: 'Активные транзакции',
+                    html: html,
+                    width: '900px',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    didOpen: () => {
+                        // Добавляем обработчики для кнопок просмотра после открытия модального окна
+                        document.querySelectorAll('.view-tx-btn').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                viewMerchantDetails(btn.dataset.id);
+                                Swal.close();
+                            });
+                        });
+                    }
+                });
+
+            } catch (error) {
+                Swal.fire('Ошибка!', error.message, 'error');
+            }
+        }
+
+        // Функция назначения реквизитов транзакции
+        async function assignDetailsToTransaction(transactionId) {
+            logInfo('Транзакции', `Назначение реквизитов для транзакции ID: ${transactionId}`);
+            
+            try {
+                // Загружаем список доступных реквизитов
+                const response = await fetch('/api/trader/details', {
+                    headers: {
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка загрузки реквизитов');
+                }
+                
+                const requisites = await response.json();
+                
+                if (!requisites || requisites.length === 0) {
+                    return Swal.fire({
+                        title: 'Нет доступных реквизитов',
+                        text: 'Пожалуйста, сначала добавьте реквизиты в соответствующем разделе',
+                        icon: 'warning'
+                    });
+                }
+
+                const { value: requisiteId } = await Swal.fire({
+                    title: 'Выберите реквизиты',
+                    input: 'select',
+                    inputOptions: requisites.reduce((options, req) => {
+                        options[req.id] = `${req.type} (${req.details})`;
+                        return options;
+                    }, {}),
+                    showCancelButton: true,
+                    confirmButtonText: 'Назначить',
+                    cancelButtonText: 'Отмена'
+                });
+
+                if (requisiteId) {
+                    const assignResponse = await fetch(`/api/trader/transactions/${transactionId}/requisites`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({ requisites_id: requisiteId })
+                    });
+
+                    if (!assignResponse.ok) {
+                        const error = await assignResponse.json();
+                        throw new Error(error.error || 'Ошибка назначения реквизитов');
+                    }
+
+                    const result = await assignResponse.json();
+                    
+                    // Обновляем отображение
+                    const traderRequisitesDiv = document.getElementById('traderRequisitesDetails');
+                    traderRequisitesDiv.innerHTML = formatRequisites(result.trader_requisites);
+                    document.getElementById('addRequisitesBtn').style.display = 'none';
+                    
+                    Swal.fire('Успех!', 'Реквизиты успешно назначены', 'success');
+                }
+            } catch (error) {
+                logError('Транзакции', `Ошибка назначения реквизитов для транзакции ID: ${transactionId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            }
+        }
+
+        // Функция загрузки чека
+        async function uploadReceipt(transactionId, file) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);  // Используем 'file' вместо 'receipt'
+
+                logInfo('Транзакции', `Загрузка чека для транзакции ID: ${transactionId}`);
+                
+                const response = await fetch(`/api/trader/transactions/${transactionId}/receipt`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка загрузки чека');
+                }
+
+                logSuccess('Транзакции', `Чек успешно загружен для транзакции ID: ${transactionId}`);
+                Swal.fire('Успех!', 'Чек успешно загружен', 'success').then(() => {
+                    location.reload();
+                });
+            } catch (error) {
+                logError('Транзакции', `Ошибка загрузки чека для транзакции ID: ${transactionId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            }
+        }
+
+        // Функция завершения транзакции
+        async function completeTransaction(transactionId) {
+            try {
+                // Сначала проверяем наличие реквизитов (если это вывод)
+                const response = await fetch(`/api/trader/transactions/${transactionId}`);
+                if (!response.ok) {
+                    throw new Error('Не удалось получить данные транзакции');
+                }
+                
+                const transaction = await response.json();
+                
+                if (transaction.type === 'withdrawal' && !transaction.trader_requisites_id) {
+                    return Swal.fire('Ошибка!', 'Сначала назначьте реквизиты для вывода', 'error');
+                }
+
+                const { isConfirmed } = await Swal.fire({
+                    title: 'Подтверждение',
+                    text: 'Вы уверены, что хотите завершить эту транзакцию?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Да, завершить',
+                    cancelButtonText: 'Отмена'
+                });
+
+                if (isConfirmed) {
+                    const completeResponse = await fetch(`/api/trader/transactions/${transactionId}/complete`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+
+                    if (!completeResponse.ok) {
+                        const error = await completeResponse.json();
+                        throw new Error(error.error || 'Ошибка завершения транзакции');
+                    }
+
+                    logSuccess('Транзакции', `Транзакция ID: ${transactionId} успешно завершена`);
+                    Swal.fire('Успех!', 'Транзакция успешно завершена', 'success').then(() => {
+                        location.reload();
+                    });
+                }
+            } catch (error) {
+                logError('Транзакции', `Ошибка завершения транзакции ID: ${transactionId}`, error);
+                Swal.fire('Ошибка!', error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
