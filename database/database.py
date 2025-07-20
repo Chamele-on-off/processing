@@ -1,3 +1,4 @@
+# database.py
 import json
 import os
 from threading import Lock
@@ -24,7 +25,10 @@ class JSONDatabase:
                 'triangle_transactions': [],
                 'orders': [], 
                 'details': [],
-                'transaction_requisites': []  # Добавлена новая коллекция
+                'transaction_requisites': [],
+                'deposit_requests': [],
+                'withdrawal_requests': [],
+                'requisites_types': []
             }
             cls._instance.load()
         return cls._instance
