@@ -1070,7 +1070,7 @@ def admin_routes(app, db, logger):
                 'status': 'rejected',
                 'rejected_at': datetime.now().isoformat(),
                 'rejected_by': int(app.get_current_user()['id'])
-            })
+            }) 
             
             return jsonify({'success': True})
         
