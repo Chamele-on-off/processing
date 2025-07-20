@@ -57,6 +57,13 @@ def trader_routes(app, db, logger):
         # Список банков (в реальности нужно получать из базы или API)
         banks = ['Сбербанк', 'Тинькофф', 'Альфа-Банк', 'ВТБ', 'Газпромбанк']
         
+        # Убедимся, что у пользователя есть все необходимые поля баланса
+        user.setdefault('working_balance_usdt', 0)
+        user.setdefault('working_balance_rub', 0)
+        user.setdefault('insurance_balance', 0)
+        user.setdefault('deposit_rate', 0)
+        user.setdefault('withdrawal_rate', 0)
+        
         return render_template(
             'trader.html',
             user=user,
