@@ -1,3 +1,4 @@
+# init_db.py
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 
@@ -37,7 +38,12 @@ def init_db(db):
             'verified': True,
             'created_at': datetime.now().isoformat(),
             'balance': 10000.0,
-            'insurance_deposit': 0.0
+            'insurance_deposit': 0.0,
+            'working_balance_usdt': 0.0,
+            'working_balance_rub': 0.0,
+            'insurance_balance': 0.0,
+            'deposit_rate': 0.02,
+            'withdrawal_rate': 0.02
         }
         db.insert_one('users', admin_user)
         
@@ -52,11 +58,16 @@ def init_db(db):
             'balance': 5000.0,
             'insurance_deposit': 1000.0,
             'merchant_id': 'merch_12345',
-            'api_key': 'test_api_key_123'
+            'api_key': 'test_api_key_123',
+            'working_balance_usdt': 0.0,
+            'working_balance_rub': 0.0,
+            'insurance_balance': 0.0,
+            'deposit_rate': 0.02,
+            'withdrawal_rate': 0.02
         }
         db.insert_one('users', merchant_user)
         
-        # Создаем тестового трейдера
+        # Создаем тестового трейдера с полными данными балансов
         trader_user = {
             'email': 'trader@example.com',
             'password_hash': generate_password_hash('trader123'),
@@ -66,7 +77,14 @@ def init_db(db):
             'created_at': datetime.now().isoformat(),
             'balance': 2000.0,
             'insurance_deposit': 500.0,
-            'payment_methods': ['bank_transfer', 'crypto']
+            'payment_methods': ['bank_transfer', 'crypto'],
+            'working_balance_usdt': 1000.0,
+            'working_balance_rub': 50000.0,
+            'insurance_balance': 200.0,
+            'deposit_rate': 0.015,
+            'withdrawal_rate': 0.025,
+            'deposits_enabled': True,
+            'withdrawals_enabled': True
         }
         db.insert_one('users', trader_user)
         
@@ -78,7 +96,7 @@ def init_db(db):
             'min_amount': 10,
             'max_amount': 1000000,
             'crypto_currencies': ['BTC', 'ETH', 'USDT'],
-            'fiat_currencies': ['USD', 'EUR', 'GBP'],
+            'fiat_currencies': ['USD', 'EUR', 'GBP', 'RUB'],
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
         }
@@ -90,7 +108,7 @@ def init_db(db):
             'USD': 75.0,       # 1 USD = 75 RUB
             'EUR': 85.0,       # 1 EUR = 85 RUB
             'GBP': 95.0,       # 1 GBP = 95 RUB
-            'USDT': 1.0,       # 1 USDT = 1 USD
+            'USDT': 75.0,      # 1 USDT = 75 RUB
             'BTC': 30000.0,    # 1 BTC = 30000 USD
             'ETH': 2000.0,     # 1 ETH = 2000 USD
             'updated_at': datetime.now().isoformat(),
