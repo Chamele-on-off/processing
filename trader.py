@@ -454,7 +454,7 @@ def trader_routes(app, db, logger):
             if amount <= 0:
                 return jsonify({'error': 'Amount must be positive'}), 400
             
-            if amount > float(user.get('working_balance_usdt', 0))):
+            if amount > float(user.get('working_balance_usdt', 0)):
                 return jsonify({'error': 'Insufficient funds'}), 400
             
             # Проверяем реквизиты
