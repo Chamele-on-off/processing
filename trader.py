@@ -21,56 +21,83 @@ def trader_routes(app, db, logger):
         if not user:
             return redirect(url_for('login'))
         
-        # Получаем текущие курсы валют (в реальности нужно получать из API или базы)
+        # Убедимся, что у пользователя есть все необходимые поля баланса
+        user.setdefault('working_balance_usdt', 0.0)
+        user.setdefault('working_balance_rub', 0.0)
+        user.setdefault('insurance_balance', 0.0)
+        user.setdefault('deposit_rate', 0.01)  # 1% по умолчанию
+        user.setdefault('withdrawal_rate', 0.01)  # 1% по умолчанию
+        
+        # Получаем текущие курсы валют
         rates = {
             'usdt_rub': 90.0,  # Примерный курс
             'rub_usdt': 1 / 90.0
         }
         
         # Получаем активные транзакции трейдера
-        active_transactions = db.find('transactions', {
-            'trader_id': user['id'],
-            'status': 'pending'
-        }) or []
+        active_transactions = []
+        all_transactions = db.find('transactions', {'trader_id': int(user['id'])}) or []
+        
+        for t in all_transactions:
+            if not isinstance(t, dict):
+                continue
+                
+            if t.get('status') == 'pending':
+                # Добавляем время истечения (30 минут с момента создания)
+                if 'created_at' in t and not t.get('expires_at'):
+                    created_at = datetime.fromisoformat(t['created_at'])
+                    expires_at = created_at + timedelta(minutes=30)
+                    t['expires_at'] = expires_at.isoformat()
+                    db.update_one('transactions', {'id': t['id']}, {'expires_at': t['expires_at']})
+                
+                active_transactions.append(t)
         
         # Статистика за сегодня
         today = datetime.now().date()
-        today_transactions = [t for t in db.find('transactions', {'trader_id': user['id']}) or []
-                             if isinstance(t, dict) and 
-                             datetime.fromisoformat(t['created_at']).date() == today]
+        today_transactions = []
+        
+        for t in all_transactions:
+            if not isinstance(t, dict) or not isinstance(t.get('created_at'), str):
+                continue
+                
+            try:
+                created_at = datetime.fromisoformat(t['created_at']).date()
+                if created_at == today:
+                    today_transactions.append(t)
+            except ValueError:
+                continue
         
         today_stats = {
-            'deposits_count': len([t for t in today_transactions if t['type'] == 'deposit']),
-            'deposits_amount': sum(t['amount'] for t in today_transactions if t['type'] == 'deposit'),
-            'withdrawals_count': len([t for t in today_transactions if t['type'] == 'withdrawal']),
-            'withdrawals_amount': sum(t['amount'] for t in today_transactions if t['type'] == 'withdrawal'),
+            'deposits_count': len([t for t in today_transactions if t.get('type') == 'deposit']),
+            'deposits_amount': sum(float(t.get('amount', 0)) for t in today_transactions if t.get('type') == 'deposit'),
+            'withdrawals_count': len([t for t in today_transactions if t.get('type') == 'withdrawal']),
+            'withdrawals_amount': sum(float(t.get('amount', 0)) for t in today_transactions if t.get('type') == 'withdrawal'),
             'avg_processing_time': app.calculate_avg_processing_time(),
             'conversion_rate': app.calculate_conversion_rate(today_transactions)
         }
         
         # Получаем все реквизиты трейдера
-        requisites = db.find('requisites', {'trader_id': user['id']}) or []
+        requisites = db.find('requisites', {'trader_id': int(user['id'])}) or []
         
         # Получаем активные диспуты
-        disputes = db.find('disputes', {'trader_id': user['id'], 'status': 'open'}) or []
+        disputes = db.find('disputes', {'trader_id': int(user['id']}) or []
         
         # Список банков (в реальности нужно получать из базы или API)
         banks = ['Сбербанк', 'Тинькофф', 'Альфа-Банк', 'ВТБ', 'Газпромбанк']
         
-        # Убедимся, что у пользователя есть все необходимые поля баланса
-        user.setdefault('working_balance_usdt', 0)
-        user.setdefault('working_balance_rub', 0)
-        user.setdefault('insurance_balance', 0)
-        user.setdefault('deposit_rate', 0)
-        user.setdefault('withdrawal_rate', 0)
+        # Логирование для отладки
+        logger.info(f"Rendering trader dashboard for user {user['id']}")
+        logger.debug(f"User data: {user}")
+        logger.debug(f"Active transactions: {active_transactions}")
+        logger.debug(f"Today stats: {today_stats}")
         
         return render_template(
             'trader.html',
             user=user,
             active_transactions=active_transactions,
-            transactions=db.find('transactions', {'trader_id': user['id']}) or [],
-            active_deposits_count=len([t for t in active_transactions if t['type'] == 'deposit']),
-            active_withdrawals_count=len([t for t in active_transactions if t['type'] == 'withdrawal']),
+            transactions=all_transactions,
+            active_deposits_count=len([t for t in active_transactions if t.get('type') == 'deposit']),
+            active_withdrawals_count=len([t for t in active_transactions if t.get('type') == 'withdrawal']),
             requisites=requisites,
             disputes=disputes,
             today_stats=today_stats,
@@ -97,15 +124,15 @@ def trader_routes(app, db, logger):
             details = ""
             if data['type'] == 'bank_account':
                 if not all(field in data for field in ['account_number', 'bik', 'owner_name']):
-                    return jsonify({'error': 'Missing required fields for bank account'})
+                    return jsonify({'error': 'Missing required fields for bank account'}), 400
                 details = f"Счет: {data['account_number']}, БИК: {data['bik']}, Владелец: {data['owner_name']}"
             elif data['type'] == 'card':
                 if not all(field in data for field in ['card_number', 'card_expiry', 'owner_name']):
-                    return jsonify({'error': 'Missing required fields for card'})
+                    return jsonify({'error': 'Missing required fields for card'}), 400
                 details = f"Карта: {data['card_number']}, Срок: {data['card_expiry']}, Владелец: {data['owner_name']}"
             elif data['type'] == 'phone':
                 if 'phone_number' not in data:
-                    return jsonify({'error': 'Missing phone number'})
+                    return jsonify({'error': 'Missing phone number'}), 400
                 details = f"Телефон: {data['phone_number']}"
 
             new_requisite = {
@@ -132,64 +159,70 @@ def trader_routes(app, db, logger):
                 if not requisite:
                     return jsonify({'error': 'Requisite not found or access denied'}), 404
                 
-                db.update_one('requisites', {'id': int(data['requisite_id'])}, new_requisite)
-                return jsonify({'success': True, 'requisite': new_requisite})
+                if db.update_one('requisites', {'id': int(data['requisite_id'])}, new_requisite):
+                    return jsonify({'success': True, 'requisite': new_requisite})
+                else:
+                    return jsonify({'error': 'Failed to update requisite'}), 500
             
             # Иначе создаем новые реквизиты
-            db.insert_one('requisites', new_requisite)
-            return jsonify({'success': True, 'requisite': new_requisite})
+            if db.insert_one('requisites', new_requisite):
+                return jsonify({'success': True, 'requisite': new_requisite})
+            else:
+                return jsonify({'error': 'Failed to create requisite'}), 500
         
         except Exception as e:
-            logger.error(f"Error adding requisites: {str(e)}")
-            return jsonify({'error': str(e)}), 400
+            logger.error(f"Error adding requisites: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/trader/requisites/<requisite_id>', methods=['GET'])
+    @app.route('/api/trader/requisites/<int:requisite_id>', methods=['GET'])
     @app.role_required('trader')
     def get_trader_requisite(requisite_id):
         user = app.get_current_user()
         try:
-            requisite = db.find_one('requisites', {'id': int(requisite_id), 'trader_id': int(user['id'])})
+            requisite = db.find_one('requisites', {'id': requisite_id, 'trader_id': int(user['id'])})
             if not requisite:
                 return jsonify({'error': 'Requisite not found or access denied'}), 404
             
             return jsonify(requisite)
         
         except Exception as e:
-            logger.error(f"Error getting requisite: {str(e)}")
+            logger.error(f"Error getting requisite: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/trader/requisites/<requisite_id>', methods=['DELETE'])
+    @app.route('/api/trader/requisites/<int:requisite_id>', methods=['DELETE'])
     @app.role_required('trader')
     @app.csrf_protect
     def delete_trader_requisite(requisite_id):
         user = app.get_current_user()
         try:
-            requisite = db.find_one('requisites', {'id': int(requisite_id), 'trader_id': int(user['id'])})
+            requisite = db.find_one('requisites', {'id': requisite_id, 'trader_id': int(user['id'])})
             if not requisite:
                 return jsonify({'error': 'Requisite not found or access denied'}), 404
             
             # Проверяем, нет ли активных транзакций с этими реквизитами
             active_transactions = db.find('transactions', {
-                'requisites_id': int(requisite_id),
+                'requisites_id': requisite_id,
                 'status': 'pending'
             }) or []
             
             if active_transactions:
                 return jsonify({'error': 'Cannot delete requisite used in active transactions'}), 400
             
-            db.delete_one('requisites', {'id': int(requisite_id)})
-            return jsonify({'success': True})
+            if db.delete_one('requisites', {'id': requisite_id}):
+                return jsonify({'success': True})
+            else:
+                return jsonify({'error': 'Failed to delete requisite'}), 500
         
         except Exception as e:
-            logger.error(f"Error deleting requisite: {str(e)}")
+            logger.error(f"Error deleting requisite: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/trader/transactions/<transaction_id>', methods=['GET'])
+    @app.route('/api/trader/transactions/<int:transaction_id>', methods=['GET'])
     @app.role_required('trader')
     def get_trader_transaction(transaction_id):
         user = app.get_current_user()
         try:
-            transaction = db.find_one('transactions', {'id': int(transaction_id)})
+            transaction = db.find_one('transactions', {'id': transaction_id})
             if not transaction:
                 return jsonify({'error': 'Transaction not found'}), 404
             
@@ -219,16 +252,16 @@ def trader_routes(app, db, logger):
             return jsonify(response)
         
         except Exception as e:
-            logger.error(f"Error getting transaction: {str(e)}")
+            logger.error(f"Error getting transaction: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/trader/transactions/<transaction_id>/complete', methods=['POST'])
+    @app.route('/api/trader/transactions/<int:transaction_id>/complete', methods=['POST'])
     @app.role_required('trader')
     @app.csrf_protect
     def complete_trader_transaction(transaction_id):
         user = app.get_current_user()
         try:
-            transaction = db.find_one('transactions', {'id': int(transaction_id)})
+            transaction = db.find_one('transactions', {'id': transaction_id})
             if not transaction:
                 return jsonify({'error': 'Transaction not found'}), 404
             
@@ -248,24 +281,29 @@ def trader_routes(app, db, logger):
                 'updated_at': datetime.now().isoformat()
             }
             
-            db.update_one('transactions', {'id': int(transaction_id)}, updates)
+            if not db.update_one('transactions', {'id': transaction_id}, updates):
+                return jsonify({'error': 'Failed to update transaction'}), 500
             
             # Обновляем баланс трейдера в зависимости от типа транзакции
             if transaction['type'] == 'deposit':
                 # Для депозитов уменьшаем рабочий баланс трейдера
                 new_balance = float(user.get('working_balance_rub', 0)) - float(transaction['amount'])
-                db.update_one('users', {'id': int(user['id'])}, {'working_balance_rub': new_balance})
+                if not db.update_one('users', {'id': int(user['id'])}, {'working_balance_rub': new_balance}):
+                    return jsonify({'error': 'Failed to update balance'}), 500
             else:
                 # Для выплат увеличиваем рабочий баланс трейдера (в USDT)
-                usdt_amount = float(transaction['amount']) / float(transaction['rate'])
+                rate = float(transaction.get('rate', 90.0))  # По умолчанию 90 RUB за USDT
+                usdt_amount = float(transaction['amount']) / rate
                 new_balance = float(user.get('working_balance_usdt', 0)) + usdt_amount
-                db.update_one('users', {'id': int(user['id'])}, {'working_balance_usdt': new_balance})
+                if not db.update_one('users', {'id': int(user['id'])}, {'working_balance_usdt': new_balance}):
+                    return jsonify({'error': 'Failed to update balance'}), 500
             
             return jsonify({'success': True})
         except Exception as e:
+            logger.error(f"Error completing transaction: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/trader/transactions/<transaction_id>/receipt', methods=['POST'])
+    @app.route('/api/trader/transactions/<int:transaction_id>/receipt', methods=['POST'])
     @app.role_required('trader')
     @app.csrf_protect
     def upload_transaction_receipt(transaction_id):
@@ -278,14 +316,24 @@ def trader_routes(app, db, logger):
         
         if file and app.allowed_file(file.filename):
             filename = secure_filename(f"receipt_{transaction_id}_{datetime.now().timestamp()}.{file.filename.rsplit('.', 1)[1].lower()}")
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             
-            db.update_one('transactions', {'id': int(transaction_id)}, {
-                'receipt_file': filename,
-                'updated_at': datetime.now().isoformat()
-            })
-            
-            return jsonify({'success': True, 'filename': filename})
+            try:
+                file.save(file_path)
+                
+                if not db.update_one('transactions', {'id': transaction_id}, {
+                    'receipt_file': filename,
+                    'updated_at': datetime.now().isoformat()
+                }):
+                    os.remove(file_path)
+                    return jsonify({'error': 'Failed to update transaction'}), 500
+                
+                return jsonify({'success': True, 'filename': filename})
+            except Exception as e:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                logger.error(f"Error saving receipt: {str(e)}", exc_info=True)
+                return jsonify({'error': str(e)}), 500
         
         return jsonify({'error': 'Invalid file type'}), 400
 
@@ -296,12 +344,15 @@ def trader_routes(app, db, logger):
         user = app.get_current_user()
         try:
             data = request.get_json()
-            enable = data.get('enable', False)
+            enable = bool(data.get('enable', False))
             
-            db.update_one('users', {'id': int(user['id'])}, {'deposits_enabled': enable})
+            if not db.update_one('users', {'id': int(user['id'])}, {'deposits_enabled': enable}):
+                return jsonify({'error': 'Failed to update settings'}), 500
+                
             return jsonify({'success': True, 'enabled': enable})
         except Exception as e:
-            return jsonify({'error': str(e)}), 400
+            logger.error(f"Error toggling deposits: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/trader/withdrawals/toggle', methods=['POST'])
     @app.role_required('trader')
@@ -310,12 +361,15 @@ def trader_routes(app, db, logger):
         user = app.get_current_user()
         try:
             data = request.get_json()
-            enable = data.get('enable', False)
+            enable = bool(data.get('enable', False))
             
-            db.update_one('users', {'id': int(user['id'])}, {'withdrawals_enabled': enable})
+            if not db.update_one('users', {'id': int(user['id'])}, {'withdrawals_enabled': enable}):
+                return jsonify({'error': 'Failed to update settings'}), 500
+                
             return jsonify({'success': True, 'enabled': enable})
         except Exception as e:
-            return jsonify({'error': str(e)}), 400
+            logger.error(f"Error toggling withdrawals: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/trader/rates', methods=['POST'])
     @app.role_required('trader')
@@ -339,9 +393,12 @@ def trader_routes(app, db, logger):
                 'updated_at': datetime.now().isoformat()
             }
             
-            db.update_one('users', {'id': int(user['id'])}, updates)
+            if not db.update_one('users', {'id': int(user['id'])}, updates):
+                return jsonify({'error': 'Failed to update rates'}), 500
+                
             return jsonify({'success': True})
         except Exception as e:
+            logger.error(f"Error updating rates: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 400
 
     @app.route('/api/trader/deposit', methods=['POST'])
@@ -372,13 +429,16 @@ def trader_routes(app, db, logger):
                 'updated_at': datetime.now().isoformat()
             }
             
-            db.insert_one('deposits', deposit)
+            if not db.insert_one('deposits', deposit):
+                return jsonify({'error': 'Failed to create deposit'}), 500
+                
             return jsonify({
                 'success': True,
                 'wallet_address': wallet_address,
                 'amount': amount
             })
         except Exception as e:
+            logger.error(f"Error processing deposit: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 400
 
     @app.route('/api/trader/withdraw', methods=['POST'])
@@ -415,27 +475,30 @@ def trader_routes(app, db, logger):
                 'updated_at': datetime.now().isoformat()
             }
             
-            db.insert_one('withdrawals', withdrawal)
+            if not db.insert_one('withdrawals', withdrawal):
+                return jsonify({'error': 'Failed to create withdrawal'}), 500
             
             # Резервируем средства
             new_balance = float(user.get('working_balance_usdt', 0)) - amount
-            db.update_one('users', {'id': int(user['id'])}, {'working_balance_usdt': new_balance})
+            if not db.update_one('users', {'id': int(user['id'])}, {'working_balance_usdt': new_balance}):
+                return jsonify({'error': 'Failed to update balance'}), 500
             
             return jsonify({'success': True})
         except Exception as e:
+            logger.error(f"Error processing withdrawal: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 400
 
-    @app.route('/api/trader/disputes/<dispute_id>', methods=['GET'])
+    @app.route('/api/trader/disputes/<int:dispute_id>', methods=['GET'])
     @app.role_required('trader')
     def get_trader_dispute(dispute_id):
         user = app.get_current_user()
         try:
-            dispute = db.find_one('disputes', {'id': int(dispute_id), 'trader_id': int(user['id'])})
+            dispute = db.find_one('disputes', {'id': dispute_id, 'trader_id': int(user['id'])})
             if not dispute:
                 return jsonify({'error': 'Dispute not found or access denied'}), 404
             
             # Получаем связанную транзакцию
-            transaction = db.find_one('transactions', {'id': int(dispute['transaction_id'])})
+            transaction = db.find_one('transactions', {'id': int(dispute.get('transaction_id', 0))})
             
             response = {
                 'id': dispute.get('id'),
@@ -454,19 +517,20 @@ def trader_routes(app, db, logger):
             
             return jsonify(response)
         except Exception as e:
+            logger.error(f"Error getting dispute: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/trader/disputes/<dispute_id>/resolve', methods=['POST'])
+    @app.route('/api/trader/disputes/<int:dispute_id>/resolve', methods=['POST'])
     @app.role_required('trader')
     @app.csrf_protect
     def resolve_trader_dispute(dispute_id):
         user = app.get_current_user()
         try:
             data = request.get_json()
-            resolve = data.get('resolve', False)
+            resolve = bool(data.get('resolve', False))
             comment = data.get('comment', '')
             
-            dispute = db.find_one('disputes', {'id': int(dispute_id), 'trader_id': int(user['id'])})
+            dispute = db.find_one('disputes', {'id': dispute_id, 'trader_id': int(user['id'])})
             if not dispute:
                 return jsonify({'error': 'Dispute not found or access denied'}), 404
             
@@ -480,18 +544,21 @@ def trader_routes(app, db, logger):
                 'updated_at': datetime.now().isoformat()
             }
             
-            db.update_one('disputes', {'id': int(dispute_id)}, updates)
+            if not db.update_one('disputes', {'id': dispute_id}, updates):
+                return jsonify({'error': 'Failed to update dispute'}), 500
             
             # Если диспут решен в пользу клиента, списываем средства со страхового депозита
             if resolve:
-                transaction = db.find_one('transactions', {'id': int(dispute['transaction_id'])})
+                transaction = db.find_one('transactions', {'id': int(dispute.get('transaction_id', 0))})
                 if transaction:
                     insurance_amount = float(dispute.get('amount', 0))
                     new_insurance = float(user.get('insurance_balance', 0)) - insurance_amount
-                    db.update_one('users', {'id': int(user['id'])}, {'insurance_balance': new_insurance})
+                    if not db.update_one('users', {'id': int(user['id'])}, {'insurance_balance': new_insurance}):
+                        return jsonify({'error': 'Failed to update insurance balance'}), 500
             
             return jsonify({'success': True})
         except Exception as e:
+            logger.error(f"Error resolving dispute: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/trader/stats', methods=['GET'])
@@ -512,31 +579,38 @@ def trader_routes(app, db, logger):
                     if not isinstance(t, dict):
                         continue
                         
-                    created_at = datetime.fromisoformat(t['created_at']).date()
-                    
-                    if date_from and created_at < datetime.strptime(date_from, '%Y-%m-%d').date():
+                    if not isinstance(t.get('created_at'), str):
                         continue
-                    
-                    if date_to and created_at > datetime.strptime(date_to, '%Y-%m-%d').date():
+                        
+                    try:
+                        created_at = datetime.fromisoformat(t['created_at']).date()
+                        
+                        if date_from and created_at < datetime.strptime(date_from, '%Y-%m-%d').date():
+                            continue
+                        
+                        if date_to and created_at > datetime.strptime(date_to, '%Y-%m-%d').date():
+                            continue
+                        
+                        filtered_transactions.append(t)
+                    except (ValueError, TypeError):
                         continue
-                    
-                    filtered_transactions.append(t)
                 
                 transactions = filtered_transactions
             
             # Рассчитываем статистику
             stats = {
                 'total_transactions': len(transactions),
-                'deposits_count': len([t for t in transactions if t['type'] == 'deposit']),
-                'deposits_amount': sum(t['amount'] for t in transactions if t['type'] == 'deposit'),
-                'withdrawals_count': len([t for t in transactions if t['type'] == 'withdrawal']),
-                'withdrawals_amount': sum(t['amount'] for t in transactions if t['type'] == 'withdrawal'),
+                'deposits_count': len([t for t in transactions if t.get('type') == 'deposit']),
+                'deposits_amount': sum(float(t.get('amount', 0)) for t in transactions if t.get('type') == 'deposit'),
+                'withdrawals_count': len([t for t in transactions if t.get('type') == 'withdrawal']),
+                'withdrawals_amount': sum(float(t.get('amount', 0)) for t in transactions if t.get('type') == 'withdrawal'),
                 'conversion_rate': app.calculate_conversion_rate(transactions),
                 'avg_processing_time': app.calculate_avg_processing_time()
             }
             
             return jsonify(stats)
         except Exception as e:
+            logger.error(f"Error getting stats: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
     return app
