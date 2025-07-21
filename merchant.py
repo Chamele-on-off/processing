@@ -1,10 +1,10 @@
 from flask import render_template, jsonify, request, session, send_from_directory
 from datetime import datetime, timedelta
-from flask import jsonify, render_template, request, session, redirect, url_for, send_from_directory
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import os
 import logging
+import secrets
 from functools import wraps
 
 def merchant_routes(app, db, logger):
@@ -18,47 +18,52 @@ def merchant_routes(app, db, logger):
         user = app.get_current_user()
         merchant_id = int(user['id'])
 
+        # Получаем типы реквизитов
         requisites_types = db.find_one('requisites_types', {}) or {}
         if requisites_types and 'types' in requisites_types:
             requisites_types = requisites_types['types']
         else:
-            requisites_types = []
+            requisites_types = [
+                {'id': '1', 'name': 'Банковский счет'},
+                {'id': '2', 'name': 'Банковская карта'},
+                {'id': '3', 'name': 'Криптокошелек'}
+            ]
         
+        # Получаем транзакции мерчанта
         transactions = [t for t in (db.find('transactions', {'merchant_id': merchant_id})) or [] if isinstance(t, dict)]
         api_keys = [k for k in (db.find('api_keys', {'merchant_id': merchant_id})) or [] if isinstance(k, dict)]
         matches = [m for m in (db.find('matches', {'merchant_id': merchant_id})) or [] if isinstance(m, dict)]
         
+        # Сортируем последние транзакции
         recent_transactions = sorted(
             [t for t in transactions if isinstance(t, dict)],
             key=lambda x: x.get('created_at', ''),
             reverse=True
         )[:5]
         
+        # Рассчитываем статистику
         stats = {
             'today_transactions': len([t for t in transactions 
                                      if isinstance(t.get('created_at'), str) and
                                      datetime.fromisoformat(t['created_at']).date() == datetime.now().date()]),
             'avg_amount': round(sum(float(t.get('amount', 0)) for t in transactions) / len(transactions), 2) if transactions else 0,
-            'conversion_rate': app.calculate_conversion_rate(transactions),
-            'weekly_stats': app.calculate_weekly_stats(transactions)
+            'conversion_rate': calculate_conversion_rate(transactions),
+            'weekly_stats': calculate_weekly_stats(transactions)
         }
         
+        # Фильтруем транзакции по статусам
         pending_transactions = [t for t in transactions if t.get('status') == 'pending']
         completed_transactions = [t for t in transactions if t.get('status') == 'completed']
         
+        # Фильтруем матчи по статусам
         pending_matches = [m for m in matches if m.get('status') == 'pending']
         completed_matches = [m for m in matches if m.get('status') == 'completed']
         rejected_matches = [m for m in matches if m.get('status') == 'rejected']
 
+        # Получаем запросы на депозит и вывод
         deposit_requests = db.find('deposit_requests', {'user_id': merchant_id}) or []
         withdrawal_requests = db.find('withdrawal_requests', {'user_id': merchant_id}) or []
 
-        requisites_types = [
-            {'id': '1', 'name': 'Банковский счет'},
-            {'id': '2', 'name': 'Банковская карта'},
-            {'id': '3', 'name': 'Криптокошелек'}
-        ]
-        
         return render_template(
             'merchant.html',
             user=user,
@@ -77,6 +82,33 @@ def merchant_routes(app, db, logger):
             withdrawal_requests=withdrawal_requests
         )
 
+    def calculate_conversion_rate(transactions):
+        """Рассчитывает процент успешных транзакций"""
+        if not transactions:
+            return 0.0
+            
+        completed = len([t for t in transactions if t.get('status') == 'completed'])
+        return round((completed / len(transactions)) * 100, 1)
+
+    def calculate_weekly_stats(transactions):
+        """Возвращает статистику по дням недели"""
+        days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+        counts = [0] * 7
+        
+        for tx in transactions:
+            if isinstance(tx.get('created_at'), str):
+                try:
+                    date = datetime.fromisoformat(tx['created_at'])
+                    weekday = date.weekday()  # 0-пн, 6-вс
+                    counts[weekday] += 1
+                except ValueError:
+                    continue
+        
+        return {
+            'days': days,
+            'counts': counts
+        }
+
     @app.route('/api/merchant/transactions', methods=['POST'])
     @app.role_required('merchant')
     @app.csrf_protect
@@ -87,19 +119,28 @@ def merchant_routes(app, db, logger):
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
 
+            # Валидация данных
+            if 'amount' not in data or float(data['amount']) <= 0:
+                return jsonify({'error': 'Invalid amount'}), 400
+            if 'type' not in data or data['type'] not in ['deposit', 'withdrawal']:
+                return jsonify({'error': 'Invalid transaction type'}), 400
+            if 'method' not in data or data['method'] not in ['bank', 'card', 'crypto']:
+                return jsonify({'error': 'Invalid payment method'}), 400
+
             new_tx = {
                 'id': int(uuid.uuid4().int & (1<<31)-1),
                 'merchant_id': int(user['id']),
-                'type': data.get('type'),
-                'amount': float(data.get('amount', 0)),
+                'type': data['type'],
+                'amount': float(data['amount']),
                 'currency': data.get('currency', 'RUB'), 
-                'method': data.get('method'),
+                'method': data['method'],
                 'status': 'pending',
                 'created_at': datetime.now().isoformat(),
                 'updated_at': datetime.now().isoformat()
             }
             
             db.insert_one('transactions', new_tx)
+            logger.info(f"Created new transaction {new_tx['id']} for merchant {user['id']}")
             return jsonify({'success': True, 'transaction': new_tx})
         
         except Exception as e:
@@ -125,6 +166,7 @@ def merchant_routes(app, db, logger):
                 'cancelled_by': int(user['id'])
             })
             
+            logger.info(f"Cancelled transaction {tx_id} by merchant {user['id']}")
             return jsonify({'success': True})
         
         except Exception as e:
@@ -132,7 +174,8 @@ def merchant_routes(app, db, logger):
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/merchant/transactions/<int:tx_id>/requisites', methods=['POST'])
-    @app.login_required
+    @app.role_required('merchant')
+    @app.csrf_protect
     def save_requisites(tx_id):
         try:
             data = request.get_json()
@@ -141,6 +184,7 @@ def merchant_routes(app, db, logger):
             if not tx:
                 return jsonify({'success': False, 'error': 'Transaction not found'}), 404
 
+            # Валидация реквизитов в зависимости от типа
             if data['type'] == 'bank':
                 required = ['bank_name', 'bik', 'account_number', 'account_holder']
                 if not all(data.get(field) for field in required):
@@ -153,21 +197,41 @@ def merchant_routes(app, db, logger):
                 'bik': data.get('bik'),
                 'account_number': data.get('account_number'),
                 'account_holder': data.get('account_holder'),
+                'card_number': data.get('card_number'),
+                'card_holder': data.get('card_holder'),
+                'expiry_date': data.get('expiry_date'),
+                'crypto_type': data.get('crypto_type'),
+                'wallet_address': data.get('wallet_address'),
                 'created_at': datetime.now().isoformat()
             }
             
             db.insert_one('transaction_requisites', requisites)
             
+            # Обновляем статус транзакции
+            db.update_one('transactions', {'id': tx_id}, {
+                'requisites_approved': True,
+                'updated_at': datetime.now().isoformat()
+            })
+            
+            logger.info(f"Saved requisites for transaction {tx_id}")
             return jsonify({'success': True})
         
         except Exception as e:
+            logger.error(f"Error saving requisites: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/api/merchant/transactions/<int:tx_id>/requisites', methods=['GET'])
-    @app.login_required
+    @app.role_required('merchant')
     def get_requisites(tx_id):
-        requisites = db.find('transaction_requisites', {'transaction_id': tx_id})
-        return jsonify([r for r in requisites])
+        try:
+            requisites = db.find('transaction_requisites', {'transaction_id': tx_id})
+            if not requisites:
+                return jsonify({'error': 'Requisites not found'}), 404
+                
+            return jsonify([r for r in requisites])
+        except Exception as e:
+            logger.error(f"Error getting requisites: {str(e)}")
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/merchant/api_keys', methods=['POST'])
     @app.role_required('merchant')
@@ -185,6 +249,7 @@ def merchant_routes(app, db, logger):
             }
             
             db.insert_one('api_keys', new_key)
+            logger.info(f"Generated new API key for merchant {user['id']}")
             return jsonify({
                 'success': True,
                 'api_key': new_key['key'],
@@ -206,6 +271,7 @@ def merchant_routes(app, db, logger):
                 return jsonify({'error': 'API key not found'}), 404
             
             db.delete_one('api_keys', {'id': int(key_id)})
+            logger.info(f"Revoked API key {key_id} for merchant {user['id']}")
             return jsonify({'success': True})
         
         except Exception as e:
@@ -220,6 +286,7 @@ def merchant_routes(app, db, logger):
             user = app.get_current_user()
             merchant_id = int(user['id'])
             
+            # Получаем настройки системы
             currency_rates = db.find_one('system_settings', {'type': 'currency_rates'}) or {
                 'USD': 75.0, 'EUR': 85.0, 'USDT': 1.0
             }
@@ -227,6 +294,7 @@ def merchant_routes(app, db, logger):
                 'default': 0.02
             }
 
+            # Получаем ожидающие депозиты и выводы с подтвержденными реквизитами
             pending_deposits = [
                 tx for tx in db.find('transactions', {
                     'status': 'pending', 
@@ -243,15 +311,18 @@ def merchant_routes(app, db, logger):
                 }) if tx and tx.get('requisites_approved')
             ]
 
+            # Конвертируем суммы в базовую валюту
             for tx in pending_deposits + pending_withdrawals:
                 tx['converted_amount'] = float(tx['amount']) * currency_rates.get(tx.get('currency', 'RUB'), 1)
 
+            # Сортируем депозиты по убыванию суммы, выводы по возрастанию
             pending_deposits.sort(key=lambda x: -x['converted_amount'])
             pending_withdrawals.sort(key=lambda x: x['converted_amount'])
 
             matched_pairs = []
             used_deposit_ids = set()
 
+            # Производим матчинг
             for withdrawal in pending_withdrawals:
                 commission = commission_settings.get('per_merchant', {}).get(str(merchant_id), 
                               commission_settings.get('default', 0.02))
@@ -286,6 +357,7 @@ def merchant_routes(app, db, logger):
                     db.insert_one('matches', match)
                     matched_pairs.append(match)
 
+                    # Обновляем статусы транзакций
                     for d in matched_deposits:
                         db.update_one('transactions', {'id': d['id']}, {
                             'status': 'matched',
@@ -296,9 +368,11 @@ def merchant_routes(app, db, logger):
                         'match_id': match['id']
                     })
 
+            logger.info(f"Performed matching for merchant {merchant_id}, created {len(matched_pairs)} matches")
             return jsonify({
                 'success': True,
-                'matches_created': len(matched_pairs)
+                'matches_created': len(matched_pairs),
+                'matches': matched_pairs
             })
         except Exception as e:
             logger.error(f"Merchant matching error: {str(e)}")
@@ -318,6 +392,7 @@ def merchant_routes(app, db, logger):
             
             return jsonify(matches)
         except Exception as e:
+            logger.error(f"Error getting matches: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/merchant/matches/<match_id>/confirm', methods=['POST'])
@@ -339,6 +414,7 @@ def merchant_routes(app, db, logger):
                 'completed_at': datetime.now().isoformat()
             })
             
+            # Обновляем статусы связанных транзакций
             for dep_id in match.get('deposit_ids', []):
                 db.update_one('transactions', {'id': dep_id}, {
                     'status': 'completed',
@@ -351,8 +427,10 @@ def merchant_routes(app, db, logger):
                     'completed_at': datetime.now().isoformat()
                 })
             
+            logger.info(f"Merchant {user['id']} confirmed match {match_id}")
             return jsonify({'success': True})
         except Exception as e:
+            logger.error(f"Error confirming match: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/merchant/matches/<match_id>/reject', methods=['POST'])
@@ -375,11 +453,14 @@ def merchant_routes(app, db, logger):
             
             db.update_one('matches', {'id': int(match_id)}, updates)
             
-            if match.get('deposit_id'):
-                db.update_one('transactions', {'id': match['deposit_id']}, {'status': 'rejected'})
-            if match.get('withdrawal_id'):
-                db.update_one('transactions', {'id': match['withdrawal_id']}, {'status': 'rejected'})
+            # Возвращаем транзакции в статус pending
+            for dep_id in match.get('deposit_ids', []):
+                db.update_one('transactions', {'id': dep_id}, {'status': 'pending'})
             
+            if match.get('withdrawal_id'):
+                db.update_one('transactions', {'id': match['withdrawal_id']}, {'status': 'pending'})
+            
+            logger.info(f"Merchant {user['id']} rejected match {match_id}")
             return jsonify({'success': True})
         
         except Exception as e:
@@ -389,7 +470,7 @@ def merchant_routes(app, db, logger):
     @app.route('/api/merchant/transactions/<tx_id>/verify', methods=['POST'])
     @app.role_required('merchant')
     @app.csrf_protect
-    def verify_merchant_transaction_sole(tx_id):
+    def verify_merchant_transaction(tx_id):
         user = app.get_current_user()
         try:
             if 'file' not in request.files:
@@ -409,6 +490,7 @@ def merchant_routes(app, db, logger):
                     'verified_at': datetime.now().isoformat()
                 })
                 
+                logger.info(f"Verified transaction {tx_id} with file {filename}")
                 return jsonify({'success': True})
             
             return jsonify({'error': 'Invalid file type'}), 400
@@ -422,7 +504,8 @@ def merchant_routes(app, db, logger):
     @app.csrf_protect
     def refresh_matches():
         try:
-            matched_pairs = app.perform_matching()
+            matched_pairs = perform_merchant_matching().json['matches']
+            logger.info(f"Refreshed matches, created {len(matched_pairs)} new matches")
             return jsonify({
                 'success': True,
                 'count': len(matched_pairs),
@@ -430,57 +513,6 @@ def merchant_routes(app, db, logger):
             })
         except Exception as e:
             logger.error(f"Ошибка при обновлении матчинга: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/merchant/matches/pending', methods=['GET'])
-    @app.role_required('merchant')
-    def get_pending_matches():
-        try:
-            page = int(request.args.get('page', 1))
-            per_page = int(request.args.get('per_page', 10))
-            
-            matches = MatchingService.get_pending_matches(
-                limit=per_page,
-                offset=(page-1)*per_page
-            )
-            
-            return jsonify({
-                'success': True,
-                'data': matches['data'],
-                'total': matches['total'],
-                'page': page,
-                'per_page': per_page
-            })
-        except Exception as e:
-            return jsonify({'error': str(e)}), 400
-
-    @app.route('/api/merchant/matching/auto', methods=['POST'])
-    @app.role_required('merchant')
-    @app.csrf_protect
-    def toggle_auto_matching():
-        global AUTO_MATCHING_ENABLED
-        try:
-            data = request.get_json()
-            AUTO_MATCHING_ENABLED = bool(data.get('enabled', False))
-            
-            return jsonify({
-                'success': True,
-                'auto_matching': AUTO_MATCHING_ENABLED
-            })
-        except Exception as e:
-            return jsonify({'error': str(e)}), 400
-
-    @app.route('/api/requisites/types/<method>')
-    @app.role_required('merchant')
-    def get_requisites_types(method):
-        try:
-            types = db.find_one('requisites_types', {}) or {}
-            if types and 'types' in types:
-                req_type = next((t for t in types['types'] if t['name'].lower() == method.lower()), None)
-                if req_type:
-                    return jsonify(req_type)
-            return jsonify({'error': 'Type not found'}), 404
-        except Exception as e:
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/deposit_requests', methods=['POST'])
@@ -506,8 +538,10 @@ def merchant_routes(app, db, logger):
             }
             
             db.insert_one('deposit_requests', request_data)
+            logger.info(f"Created deposit request {request_data['id']} for merchant {user['id']}")
             return jsonify({'success': True, 'request': request_data})
         except Exception as e:
+            logger.error(f"Error creating deposit request: {str(e)}")
             return jsonify({'error': str(e)}), 400
 
     @app.route('/api/withdrawal_requests', methods=['POST'])
@@ -536,8 +570,10 @@ def merchant_routes(app, db, logger):
             }
             
             db.insert_one('withdrawal_requests', request_data)
+            logger.info(f"Created withdrawal request {request_data['id']} for merchant {user['id']}")
             return jsonify({'success': True, 'request': request_data})
         except Exception as e:
+            logger.error(f"Error creating withdrawal request: {str(e)}")
             return jsonify({'error': str(e)}), 400
 
     @app.route('/api/requisites/types', methods=['GET'])
@@ -613,6 +649,7 @@ def merchant_routes(app, db, logger):
             
             return jsonify(types_data[type_id])
         except Exception as e:
+            logger.error(f"Error getting requisites type fields: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
     return app
