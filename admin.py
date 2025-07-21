@@ -1078,4 +1078,4 @@ def admin_routes(app, db, logger):
             logger.error(f"Error rejecting trader withdrawal: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
-    return app
+    return app 
