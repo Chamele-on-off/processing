@@ -101,6 +101,10 @@ def admin_routes(app, db, logger):
                     'details': details.get('details', 'Не указаны')
                 })
 
+            # Получаем трейдеров и мерчантов
+            traders = [u for u in users if u.get('role') == 'trader']
+            merchants = [u for u in users if u.get('role') == 'merchant']
+
             stats = {
                 'total_users': len(users),
                 'today_transactions': len([t for t in all_transactions 
@@ -110,7 +114,9 @@ def admin_routes(app, db, logger):
                                      if u.get('role') == 'trader' and u.get('is_active', True)]),
                 'avg_processing_time': app.calculate_avg_processing_time(),
                 'activity': app.generate_activity_data(),
-                'pending_deposits': len([d for d in deposit_requests if d['status'] == 'pending'])
+                'pending_deposits': len([d for d in deposit_requests if d['status'] == 'pending']),
+                'total_traders': len(traders),
+                'total_merchants': len(merchants)
             }
 
             active_users = [u for u in users if u.get('active', True)]
@@ -125,7 +131,9 @@ def admin_routes(app, db, logger):
                 pending_transactions=[t for t in all_transactions if t['status'] == 'pending'],
                 completed_transactions=[t for t in all_transactions if t['status'] == 'completed'],
                 active_users=active_users,
-                deposit_requests=deposit_requests
+                deposit_requests=deposit_requests,
+                traders=traders,
+                merchants=merchants
             )
             
         except Exception as e:
@@ -139,7 +147,9 @@ def admin_routes(app, db, logger):
                     'active_traders': 0,
                     'avg_processing_time': 0,
                     'activity': {'labels': [], 'values': []},
-                    'pending_deposits': 0
+                    'pending_deposits': 0,
+                    'total_traders': 0,
+                    'total_merchants': 0
                 },
                 recent_transactions=[],
                 users=[],
@@ -147,7 +157,9 @@ def admin_routes(app, db, logger):
                 pending_transactions=[],
                 completed_transactions=[],
                 active_users=[],
-                deposit_requests=[]
+                deposit_requests=[],
+                traders=[],
+                merchants=[]
             )
 
     @app.route('/admin/users/create', methods=['GET', 'POST'])
@@ -540,7 +552,15 @@ def admin_routes(app, db, logger):
     def update_currency_rates():
         try:
             data = request.get_json()
-            current_rates = db.find_one('system_settings', {'type': 'currency_rates'}) or {}
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+                
+            current_rates = db.find_one('system_settings', {'type': 'currency_rates'}) or {
+                'type': 'currency_rates',
+                'USD': 75.0,
+                'EUR': 85.0,
+                'USDT': 1.0
+            }
             
             updates = {
                 'USD': float(data.get('USD', current_rates.get('USD', 75.0))),
@@ -562,13 +582,18 @@ def admin_routes(app, db, logger):
     def update_commissions():
         try:
             data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+                
             current = db.find_one('system_settings', {'type': 'commissions'}) or {
+                'type': 'commissions',
                 'default': 0.02,
-                'per_merchant': {}
+                'per_merchant': {},
+                'updated_at': datetime.now().isoformat()
             }
             
             updates = {
-                'default': float(data.get('default', current.get('default'))),
+                'default': float(data.get('default', current.get('default', 0.02))),
                 'per_merchant': data.get('per_merchant', current.get('per_merchant', {})),
                 'updated_at': datetime.now().isoformat()
             }
@@ -802,8 +827,12 @@ def admin_routes(app, db, logger):
     @app.log_request
     @app.log_response
     def get_matches():
-        matches = db.find('matches') or []
-        return jsonify([m for m in matches if isinstance(m, dict)])
+        try:
+            matches = db.find('matches') or []
+            return jsonify([m for m in matches if isinstance(m, dict)])
+        except Exception as e:
+            logger.error(f"Error getting matches: {str(e)}")
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/admin/matching/run', methods=['POST'])
     @app.role_required('admin')
@@ -823,7 +852,32 @@ def admin_routes(app, db, logger):
             logger.info(f"Pending deposits: {len(pending_deposits)}")
             logger.info(f"Pending withdrawals: {len(pending_withdrawals)}")
             
-            matched_pairs = app.perform_matching()
+            matched_pairs = []
+            
+            # Простой алгоритм матчинга - сортируем по сумме и пытаемся сопоставить
+            pending_deposits.sort(key=lambda x: float(x.get('amount', 0)))
+            pending_withdrawals.sort(key=lambda x: float(x.get('amount', 0)))
+            
+            for deposit in pending_deposits:
+                for withdrawal in pending_withdrawals:
+                    if float(deposit.get('amount', 0)) == float(withdrawal.get('amount', 0)):
+                        match_id = int(uuid.uuid4().int & (1<<31)-1)
+                        matched_pairs.append({
+                            'id': match_id,
+                            'deposit_ids': [deposit['id']],
+                            'withdrawal_id': withdrawal['id'],
+                            'amount': float(deposit.get('amount', 0)),
+                            'currency': deposit.get('currency', 'RUB'),
+                            'status': 'pending',
+                            'created_at': datetime.now().isoformat()
+                        })
+                        
+                        # Добавляем матч в базу данных
+                        db.insert_one('matches', matched_pairs[-1])
+                        
+                        # Удаляем сопоставленные транзакции из списков
+                        pending_withdrawals.remove(withdrawal)
+                        break
             
             logger.info(f"Matching completed. Found {len(matched_pairs)} pairs")
             
@@ -910,6 +964,8 @@ def admin_routes(app, db, logger):
     def confirm_match(match_id):
         try:
             match = db.find_one('matches', {'id': match_id})
+            if not match:
+                return jsonify({'error': 'Match not found'}), 404
             
             db.update_one('matches', {'id': match_id}, {'status': 'completed'})
             
@@ -934,32 +990,52 @@ def admin_routes(app, db, logger):
     @app.log_request
     @app.log_response
     def get_settings():
-        settings = db.find_one('system_settings', {'type': 'platform_settings'}) or {
-            'usd_rate': 75.0,
-            'eur_rate': 85.0,
-            'usdt_rate': 1.0,
-            'default_fee': 2.0,
-            'trader_fee': 1.5
-        }
-        return jsonify(settings)
+        try:
+            settings = db.find_one('system_settings', {'type': 'platform_settings'}) or {
+                'type': 'platform_settings',
+                'usd_rate': 75.0,
+                'eur_rate': 85.0,
+                'usdt_rate': 1.0,
+                'default_fee': 2.0,
+                'trader_fee': 1.5,
+                'updated_at': datetime.now().isoformat()
+            }
+            return jsonify(settings)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/admin/settings', methods=['POST'])
     @app.role_required('admin')
     @app.log_request
     @app.log_response
     def update_settings():
-        data = request.form
-        updates = {
-            'usd_rate': float(data.get('usd_rate', 75.0)),
-            'eur_rate': float(data.get('eur_rate', 85.0)),
-            'usdt_rate': float(data.get('usdt_rate', 1.0)),
-            'default_fee': float(data.get('default_fee', 2.0)),
-            'trader_fee': float(data.get('trader_fee', 1.5)),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        db.update_one('system_settings', {'type': 'platform_settings'}, updates)
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+                
+            current_settings = db.find_one('system_settings', {'type': 'platform_settings'}) or {
+                'type': 'platform_settings',
+                'usd_rate': 75.0,
+                'eur_rate': 85.0,
+                'usdt_rate': 1.0,
+                'default_fee': 2.0,
+                'trader_fee': 1.5
+            }
+            
+            updates = {
+                'usd_rate': float(data.get('usd_rate', current_settings.get('usd_rate', 75.0))),
+                'eur_rate': float(data.get('eur_rate', current_settings.get('eur_rate', 85.0))),
+                'usdt_rate': float(data.get('usdt_rate', current_settings.get('usdt_rate', 1.0))),
+                'default_fee': float(data.get('default_fee', current_settings.get('default_fee', 2.0))),
+                'trader_fee': float(data.get('trader_fee', current_settings.get('trader_fee', 1.5))),
+                'updated_at': datetime.now().isoformat()
+            }
+            
+            db.update_one('system_settings', {'type': 'platform_settings'}, updates)
+            return jsonify({'success': True, 'settings': updates})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
 
     @app.route('/api/admin/pending-trader-withdrawals')
     @app.role_required('admin')
@@ -973,7 +1049,7 @@ def admin_routes(app, db, logger):
             ]
             
             traders = {u['id']: u for u in (db.find('users') or []) 
-                      if isinstance(u, dict) and u.get('role') == 'trader'}
+                      if isinstance(u, dict) and u.get('role') == 'trader']
             
             details = {d['id']: d for d in (db.find('details') or []) if isinstance(d, dict)}
             
@@ -1078,4 +1154,4 @@ def admin_routes(app, db, logger):
             logger.error(f"Error rejecting trader withdrawal: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
-    return app 
+    return app
