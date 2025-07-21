@@ -22,6 +22,9 @@ def trader_routes(app, db, logger):
             return redirect(url_for('login'))
         
         # Убедимся, что у пользователя есть все необходимые поля баланса
+        if not isinstance(user, dict):
+            user = {}
+            
         user.setdefault('working_balance_usdt', 0.0)
         user.setdefault('working_balance_rub', 0.0)
         user.setdefault('insurance_balance', 0.0)
@@ -36,7 +39,7 @@ def trader_routes(app, db, logger):
         
         # Получаем активные транзакции трейдера
         active_transactions = []
-        all_transactions = db.find('transactions', {'trader_id': int(user['id'])}) or []
+        all_transactions = db.find('transactions', {'trader_id': int(user.get('id', 0))}) or []
         
         for t in all_transactions:
             if not isinstance(t, dict):
@@ -45,10 +48,14 @@ def trader_routes(app, db, logger):
             if t.get('status') == 'pending':
                 # Добавляем время истечения (30 минут с момента создания)
                 if 'created_at' in t and not t.get('expires_at'):
-                    created_at = datetime.fromisoformat(t['created_at'])
-                    expires_at = created_at + timedelta(minutes=30)
-                    t['expires_at'] = expires_at.isoformat()
-                    db.update_one('transactions', {'id': t['id']}, {'expires_at': t['expires_at']})
+                    try:
+                        created_at = datetime.fromisoformat(t['created_at'])
+                        expires_at = created_at + timedelta(minutes=30)
+                        t['expires_at'] = expires_at.isoformat()
+                        db.update_one('transactions', {'id': t['id']}, {'expires_at': t['expires_at']})
+                    except (ValueError, TypeError) as e:
+                        logger.error(f"Error processing transaction date: {str(e)}")
+                        continue
                 
                 active_transactions.append(t)
         
@@ -64,7 +71,8 @@ def trader_routes(app, db, logger):
                 created_at = datetime.fromisoformat(t['created_at']).date()
                 if created_at == today:
                     today_transactions.append(t)
-            except ValueError:
+            except ValueError as e:
+                logger.error(f"Error processing today's transaction: {str(e)}")
                 continue
         
         today_stats = {
@@ -77,18 +85,18 @@ def trader_routes(app, db, logger):
         }
         
         # Получаем все реквизиты трейдера
-        requisites = db.find('requisites', {'trader_id': int(user['id'])}) or []
+        requisites = db.find('requisites', {'trader_id': int(user.get('id', 0))}) or []
         
         # Получаем активные диспуты
-        disputes = db.find('disputes', {'trader_id': int(user['id'])}) or []
+        disputes = db.find('disputes', {'trader_id': int(user.get('id', 0))}) or []
         
         # Список банков (в реальности нужно получать из базы или API)
         banks = ['Сбербанк', 'Тинькофф', 'Альфа-Банк', 'ВТБ', 'Газпромбанк']
         
         # Логирование для отладки
-        logger.info(f"Rendering trader dashboard for user {user['id']}")
+        logger.info(f"Rendering trader dashboard for user {user.get('id')}")
         logger.debug(f"User data: {user}")
-        logger.debug(f"Active transactions count: {len(active_transactions)}")
+        logger.debug(f"Active transactions: {active_transactions}")
         logger.debug(f"Today stats: {today_stats}")
         
         return render_template(
