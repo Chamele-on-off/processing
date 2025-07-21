@@ -80,7 +80,7 @@ def trader_routes(app, db, logger):
         requisites = db.find('requisites', {'trader_id': int(user['id'])}) or []
         
         # Получаем активные диспуты
-        disputes = db.find('disputes', {'trader_id': int(user['id']}) or []
+        disputes = db.find('disputes', {'trader_id': int(user['id'])}) or []
         
         # Список банков (в реальности нужно получать из базы или API)
         banks = ['Сбербанк', 'Тинькофф', 'Альфа-Банк', 'ВТБ', 'Газпромбанк']
