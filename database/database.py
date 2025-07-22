@@ -1,16 +1,16 @@
 # database.py
-import json
+import yaml
 import os
 from threading import Lock
 from datetime import datetime
 from pathlib import Path
 from copy import deepcopy
 
-class JSONDatabase:
+class YAMLDatabase:
     _instance = None
     _lock = Lock()
     
-    def __new__(cls, file_path='data/db.json'):
+    def __new__(cls, file_path='data/db.yaml'):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.file_path = file_path
@@ -43,9 +43,11 @@ class JSONDatabase:
             with self._lock:
                 if os.path.exists(self.file_path):
                     with open(self.file_path, 'r', encoding='utf-8') as f:
-                        self.data = json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Ошибка загрузки БД: {e}. Будет создана новая БД.")
+                        loaded_data = yaml.safe_load(f)
+                        if loaded_data is not None:
+                            self.data = loaded_data
+        except (yaml.YAMLError, IOError) as e:
+            print(f"Ошибка загрузки БД (YAML): {e}. Будет создана новая БД.")
             self.save()
     
     def save(self):
@@ -53,9 +55,16 @@ class JSONDatabase:
         with self._lock:
             try:
                 with open(self.file_path, 'w', encoding='utf-8') as f:
-                    json.dump(self.data, f, indent=2, ensure_ascii=False)
+                    yaml.dump(
+                        self.data, 
+                        f, 
+                        default_flow_style=False, 
+                        allow_unicode=True, 
+                        indent=2, 
+                        sort_keys=False
+                    )
             except IOError as e:
-                print(f"Ошибка сохранения БД: {e}")
+                print(f"Ошибка сохранения БД (YAML): {e}")
     
     def insert_one(self, collection, document):
         """Добавляет один документ в коллекцию"""
@@ -125,7 +134,7 @@ class TransactionRequisitesManager:
         """
         Инициализация менеджера
         
-        :param db: Экземпляр JSONDatabase
+        :param db: Экземпляр YAMLDatabase
         """
         self.db = db
         self.collection_name = 'transaction_requisites'
@@ -186,7 +195,7 @@ class TransactionRequisitesManager:
 
 if __name__ == '__main__':
     # Пример использования
-    db = JSONDatabase()
+    db = YAMLDatabase()
     req_manager = TransactionRequisitesManager(db)
     
     # Создаем тестовые реквизиты
