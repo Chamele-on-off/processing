@@ -261,6 +261,6 @@ def init_db(db):
         return False
 
 if __name__ == '__main__':
-    from database import JSONDatabase
-    db = JSONDatabase()
+    from database import YAMLDatabase
+    db = YAMLDatabase()
     init_db(db)
