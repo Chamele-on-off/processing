@@ -659,7 +659,7 @@ def admin_routes(app, db, logger):
             ]
             
             traders = {u['id']: u for u in (db.find('users') or []) 
-                      if isinstance(u, dict) and u.get('role') == 'trader']}
+                      if isinstance(u, dict) and u.get('role') == ['trader']}
             
             details = {d['id']: d for d in (db.find('details') or []) if isinstance(d, dict)}
             
