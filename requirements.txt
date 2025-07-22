@@ -9,9 +9,7 @@ redis==4.5.5
 zope.event==4.5.0
 zope.interface==5.4.0
 pyyaml==6.0.1
-uuid==1.30
 python-dateutil==2.8.2
 pytz==2023.3
 requests==2.31.0
-logging==0.4.9.6
 flask-cors==4.0.0
