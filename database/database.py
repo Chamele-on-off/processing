@@ -16,6 +16,22 @@ class YAMLDatabase:
             cls._instance.file_path = file_path
             cls._instance._ensure_data_dir()
             cls._instance.data = {
+                '_meta': {
+                    'counters': {
+                        'users': 0,
+                        'transactions': 0,
+                        'requisites': 0,
+                        'disputes': 0,
+                        'audit_logs': 0,
+                        'triangle_transactions': 0,
+                        'orders': 0,
+                        'details': 0,
+                        'transaction_requisites': 0,
+                        'deposit_requests': 0,
+                        'withdrawal_requests': 0,
+                        'requisites_types': 0
+                    }
+                },
                 'users': [],
                 'transactions': [],
                 'requisites': [],
@@ -45,6 +61,22 @@ class YAMLDatabase:
                     with open(self.file_path, 'r', encoding='utf-8') as f:
                         loaded_data = yaml.safe_load(f)
                         if loaded_data is not None:
+                            # Убедимся, что структура метаданных корректна
+                            if '_meta' not in loaded_data:
+                                loaded_data['_meta'] = {'counters': {}}
+                            elif 'counters' not in loaded_data['_meta']:
+                                loaded_data['_meta']['counters'] = {}
+                            
+                            # Инициализируем счетчики для всех коллекций
+                            for collection in [
+                                'users', 'transactions', 'requisites', 'disputes',
+                                'audit_logs', 'triangle_transactions', 'orders',
+                                'details', 'transaction_requisites', 'deposit_requests',
+                                'withdrawal_requests', 'requisites_types'
+                            ]:
+                                if collection not in loaded_data['_meta']['counters']:
+                                    loaded_data['_meta']['counters'][collection] = 0
+                            
                             self.data = loaded_data
         except (yaml.YAMLError, IOError) as e:
             print(f"Ошибка загрузки БД (YAML): {e}. Будет создана новая БД.")
@@ -66,13 +98,21 @@ class YAMLDatabase:
             except IOError as e:
                 print(f"Ошибка сохранения БД (YAML): {e}")
     
+    def _get_next_id(self, collection):
+        """Получает следующий уникальный ID для коллекции"""
+        if collection not in self.data['_meta']['counters']:
+            self.data['_meta']['counters'][collection] = 0
+        
+        self.data['_meta']['counters'][collection] += 1
+        return self.data['_meta']['counters'][collection]
+    
     def insert_one(self, collection, document):
         """Добавляет один документ в коллекцию"""
         if collection not in self.data:
             self.data[collection] = []
         
         doc = deepcopy(document)
-        doc['id'] = len(self.data[collection]) + 1
+        doc['id'] = self._get_next_id(collection)
         doc['created_at'] = datetime.now().isoformat()
         self.data[collection].append(doc)
         self.save()
@@ -123,6 +163,7 @@ class YAMLDatabase:
         """Создает новую коллекцию"""
         if collection_name not in self.data:
             self.data[collection_name] = []
+            self.data['_meta']['counters'][collection_name] = 0
             self.save()
             return True
         return False
