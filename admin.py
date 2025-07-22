@@ -19,6 +19,9 @@ def admin_routes(app, db, logger):
         try:
             logger.info("Admin dashboard accessed - starting data loading")
             current_admin = app.get_current_user()
+            if not current_admin:
+                return redirect(url_for('login'))
+                
             logger.debug(f"Current admin user: {current_admin['id']} - {current_admin['email']}")
 
             users = [u for u in (db.find('users') or []) if isinstance(u, dict)]
@@ -101,9 +104,9 @@ def admin_routes(app, db, logger):
                     'details': details.get('details', 'Не указаны')
                 })
 
-            # Получаем трейдеров и мерчантов
             traders = [u for u in users if u.get('role') == 'trader']
             merchants = [u for u in users if u.get('role') == 'merchant']
+            active_users = [u for u in users if u.get('active', True)]
 
             stats = {
                 'total_users': len(users),
@@ -119,11 +122,10 @@ def admin_routes(app, db, logger):
                 'total_merchants': len(merchants)
             }
 
-            active_users = [u for u in users if u.get('active', True)]
-
             return render_template(
                 'admin.html',
                 current_user=current_admin,
+                user=current_admin,
                 stats=stats,
                 recent_transactions=all_transactions[:5],
                 users=users,
@@ -140,7 +142,8 @@ def admin_routes(app, db, logger):
             logger.error(f"Error in admin dashboard: {str(e)}", exc_info=True)
             return render_template(
                 'admin.html',
-                current_user=app.get_current_user(),
+                current_user=None,
+                user=None,
                 stats={
                     'total_users': 0,
                     'today_transactions': 0,
@@ -168,9 +171,13 @@ def admin_routes(app, db, logger):
     @app.log_response
     def admin_create_user():
         current_user = app.get_current_user()
+        if not current_user:
+            return redirect(url_for('login'))
+            
         if request.method == 'GET':
             return render_template('admin_create_user.html', 
                                current_user=current_user,
+                               user=current_user,
                                stats=None)
         
         try:
@@ -189,6 +196,7 @@ def admin_routes(app, db, logger):
             if existing_user:
                 return render_template('admin_create_user.html',
                                    current_user=current_user,
+                                   user=current_user,
                                    error="Пользователь с таким email уже существует")
             
             db.insert_one('users', new_user)
@@ -199,6 +207,7 @@ def admin_routes(app, db, logger):
             logger.error(f"Ошибка при создании пользователя: {str(e)}")
             return render_template('admin_create_user.html',
                                current_user=current_user,
+                               user=current_user,
                                error=str(e))
 
     @app.route('/admin/users/<user_id>', methods=['GET', 'POST'])
@@ -207,6 +216,10 @@ def admin_routes(app, db, logger):
     @app.log_response
     def admin_edit_user(user_id):
         try:
+            current_user = app.get_current_user()
+            if not current_user:
+                return redirect(url_for('login'))
+                
             user_id_int = int(user_id)
             user = db.find_one('users', {'id': user_id_int})
             
@@ -231,14 +244,14 @@ def admin_routes(app, db, logger):
                 return redirect(url_for('admin_dashboard'))
             
             return render_template('admin_edit_user.html', 
-                               current_user=app.get_current_user(),
+                               current_user=current_user,
                                user=user)
         
         except Exception as e:
             logger.error(f"Error in admin_edit_user: {str(e)}")
             return render_template('admin_edit_user.html',
                                current_user=app.get_current_user(),
-                               user=user,
+                               user=app.get_current_user(),
                                error=str(e))
 
     @app.route('/debug/deposits')
@@ -262,6 +275,10 @@ def admin_routes(app, db, logger):
     @app.role_required('admin')
     def admin_deposits():
         try:
+            current_user = app.get_current_user()
+            if not current_user:
+                return redirect(url_for('login'))
+                
             processed_deposits = []
             
             orders_deposits = [
@@ -294,7 +311,8 @@ def admin_routes(app, db, logger):
             
             return render_template(
                 'admin_deposits.html',
-                current_user=app.get_current_user(),
+                current_user=current_user,
+                user=current_user,
                 pending_deposits=sorted(pending, key=lambda x: x['created_at'], reverse=True),
                 completed_deposits=sorted(completed, key=lambda x: x.get('completed_at', '')),
                 rejected_deposits=sorted(rejected, key=lambda x: x.get('rejected_at', '')))
@@ -303,9 +321,11 @@ def admin_routes(app, db, logger):
             logger.error(f"Error in admin_deposits: {str(e)}")
             return render_template('admin_deposits.html',
                                 current_user=app.get_current_user(),
+                                user=app.get_current_user(),
                                 pending_deposits=[],
                                 completed_deposits=[],
                                 rejected_deposits=[])
+
 
     @app.route('/admin/withdrawals')
     @app.role_required('admin')
