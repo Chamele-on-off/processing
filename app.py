@@ -5,7 +5,7 @@ from functools import wraps
 from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, url_for, make_response, Response
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from database.database import JSONDatabase, TransactionRequisitesManager
+from database.database import YAMLDatabase, TransactionRequisitesManager
 from database.init_db import init_db
 import json
 import random
@@ -32,8 +32,8 @@ def initialize_database():
     try:
         if not os.path.exists('data'):
             os.makedirs('data')
-        db = JSONDatabase('data/db.json')
-        if not os.path.exists('data/db.json'):
+        db = YAMLDatabase('data/db.yaml')
+        if not os.path.exists('data/db.yaml'):
             init_db(db)
             logger.info("Database initialized successfully")
         return db
