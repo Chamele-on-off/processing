@@ -127,9 +127,15 @@ def merchant_routes(app, db, logger):
             if 'method' not in data or data['method'] not in ['bank', 'card', 'crypto']:
                 return jsonify({'error': 'Invalid payment method'}), 400
 
+            # Назначаем случайного трейдера
+            trader_id = app.assign_random_trader(db, logger)
+            if trader_id is None:
+                return jsonify({'error': 'No active traders available to process transaction'}), 503
+
             new_tx = {
                 'id': int(uuid.uuid4().int & (1<<31)-1),
                 'merchant_id': int(user['id']),
+                'trader_id': trader_id,
                 'type': data['type'],
                 'amount': float(data['amount']),
                 'currency': data.get('currency', 'RUB'), 
@@ -140,7 +146,7 @@ def merchant_routes(app, db, logger):
             }
             
             db.insert_one('transactions', new_tx)
-            logger.info(f"Created new transaction {new_tx['id']} for merchant {user['id']}")
+            logger.info(f"Created new transaction {new_tx['id']} for merchant {user['id']} assigned to trader {trader_id}")
             return jsonify({'success': True, 'transaction': new_tx})
         
         except Exception as e:
