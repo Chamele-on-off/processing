@@ -52,11 +52,42 @@ def format_datetime(value, format='%d.%m.%Y %H:%M'):
             return value
     return value.strftime(format)
 
+def assign_random_trader(db, logger):
+    """
+    Назначает случайного активного трейдера.
+    Возвращает ID трейдера (int) или None, если активных трейдеров нет.
+    """
+    try:
+        # Получаем всех пользователей
+        all_users = db.find('users') or []
+        # Фильтруем активных трейдеров
+        traders = [
+            u for u in all_users 
+            if isinstance(u, dict) and 
+               u.get('role') == 'trader' and 
+               u.get('status', 'active') == 'active'
+        ]
+
+        if not traders:
+            logger.warning("No active traders found for assignment.")
+            return None
+
+        # Выбираем случайного трейдера
+        selected_trader = random.choice(traders)
+        trader_id = int(selected_trader['id'])
+        logger.info(f"Assigned trader {trader_id} ({selected_trader.get('email')}) to transaction.")
+        return trader_id
+
+    except Exception as e:
+        logger.error(f"Error in assign_random_trader: {e}", exc_info=True)
+        return None
+
 # Создаем экземпляр приложения
 db = initialize_database()
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.jinja_env.filters['datetimeformat'] = format_datetime
 app.jinja_env.globals.update(zip=zip)
+app.assign_random_trader = assign_random_trader
 
 # Конфигурация
 app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-key-123')
