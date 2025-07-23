@@ -38,14 +38,31 @@ def trader_routes(app, db, logger):
         }
         
         # Получаем активные транзакции трейдера
+        current_trader_id = int(user.get('id', 0))
+        logger.debug(f"[Trader Dashboard] Current trader ID: {current_trader_id}")
+
+        # Получаем ВСЕ транзакции из БД
+        all_db_transactions = db.find('transactions') or []
+        logger.debug(f"[Trader Dashboard] Total transactions in DB: {len(all_db_transactions)}")
+
+        # Фильтруем в Python
         active_transactions = []
-        all_transactions = db.find('transactions', {'trader_id': int(user.get('id', 0))}) or []
-        
-        for t in all_transactions:
+        for t in all_db_transactions:
             if not isinstance(t, dict):
                 continue
-                
-            if t.get('status') == 'pending':
+            # Проверяем статус
+            if t.get('status') != 'pending':
+                continue
+            # Проверяем, принадлежит ли транзакция текущему трейдеру
+            transaction_trader_id_raw = t.get('trader_id')
+            try:
+                # Обрабатываем возможные различия в типах (строка/число/None)
+                transaction_trader_id = int(transaction_trader_id_raw) if transaction_trader_id_raw is not None else None
+            except (ValueError, TypeError):
+                transaction_trader_id = None
+                logger.warning(f"[Trader Dashboard] Invalid trader_id format in transaction {t.get('id')}: {transaction_trader_id_raw}")
+
+            if transaction_trader_id == current_trader_id:
                 # Добавляем время истечения (30 минут с момента создания)
                 if 'created_at' in t and not t.get('expires_at'):
                     try:
@@ -58,12 +75,14 @@ def trader_routes(app, db, logger):
                         continue
                 
                 active_transactions.append(t)
+
+        logger.debug(f"[Trader Dashboard] Found {len(active_transactions)} active transactions for trader {current_trader_id}")
         
         # Статистика за сегодня
         today = datetime.now().date()
         today_transactions = []
         
-        for t in all_transactions:
+        for t in all_db_transactions:
             if not isinstance(t, dict) or not isinstance(t.get('created_at'), str):
                 continue
                 
@@ -85,10 +104,10 @@ def trader_routes(app, db, logger):
         }
         
         # Получаем все реквизиты трейдера
-        requisites = db.find('requisites', {'trader_id': int(user.get('id', 0))}) or []
+        requisites = db.find('requisites', {'trader_id': current_trader_id}) or []
         
         # Получаем активные диспуты
-        disputes = db.find('disputes', {'trader_id': int(user.get('id', 0))}) or []
+        disputes = db.find('disputes', {'trader_id': current_trader_id}) or []
         
         # Список банков (в реальности нужно получать из базы или API)
         banks = ['Сбербанк', 'Тинькофф', 'Альфа-Банк', 'ВТБ', 'Газпромбанк']
@@ -103,7 +122,7 @@ def trader_routes(app, db, logger):
             'trader.html',
             user=user,
             active_transactions=active_transactions,
-            transactions=all_transactions,
+            transactions=all_db_transactions,
             active_deposits_count=len([t for t in active_transactions if t.get('type') == 'deposit']),
             active_withdrawals_count=len([t for t in active_transactions if t.get('type') == 'withdrawal']),
             requisites=requisites,
