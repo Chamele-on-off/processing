@@ -19,15 +19,12 @@ def setup_logger():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     
-    # Форматтер для логов
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
-    # Консольный обработчик
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # Файловый обработчик с ротацией
     file_handler = RotatingFileHandler(
         'processing_platform.log',
         maxBytes=1024 * 1024,
@@ -52,25 +49,21 @@ def initialize_database():
 
 # Вспомогательные функции
 def authenticate(email, password, db):
-    """Аутентификация пользователя"""
     user = db.find_one('users', {'email': email})
     if user and check_password_hash(user['password_hash'], password):
         return user
     return None
 
 def get_current_user(db):
-    """Получение текущего пользователя из сессии"""
     if 'user_id' in session:
         return db.find_one('users', {'id': int(session['user_id'])})
     return None
 
 def allowed_file(filename, allowed_extensions):
-    """Проверка разрешенных расширений файлов"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 def calculate_avg_processing_time(db):
-    """Расчет среднего времени обработки транзакций"""
     transactions = db.find('transactions') or []
     completed = [t for t in transactions 
                 if isinstance(t, dict) and 
@@ -91,10 +84,9 @@ def calculate_avg_processing_time(db):
             logger.error(f"Error calculating processing time: {str(e)}")
             continue
     
-    return round((total_seconds / len(completed)) / 60, 2)  # в минутах
+    return round((total_seconds / len(completed)) / 60, 2)
 
 def assign_random_trader(db, logger):
-    """Назначение случайного активного трейдера"""
     try:
         traders = [
             u for u in (db.find('users') or [])
@@ -148,7 +140,7 @@ def csrf_protect(f):
             if not token or token != session.get('csrf_token'):
                 if request.is_json:
                     return jsonify({'error': 'Invalid CSRF token'}), 403
-                return render_template('error/403.html'), 403
+                return render_template('403.html'), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -185,15 +177,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Настройка Jinja2
 app.jinja_env.filters['datetimeformat'] = format_datetime
 app.jinja_env.globals.update(zip=zip)
-
-# Добавление вспомогательных методов в app
-app.login_required = login_required
-app.role_required = role_required
-app.csrf_protect = csrf_protect
-app.get_current_user = lambda: get_current_user(db)
-app.allowed_file = lambda filename: allowed_file(filename, app.config['ALLOWED_EXTENSIONS'])
-app.calculate_avg_processing_time = lambda: calculate_avg_processing_time(db)
-app.assign_random_trader = lambda: assign_random_trader(db, logger)
 
 # Генерация CSRF токена
 @app.before_request
@@ -260,6 +243,10 @@ def logout():
 def serve_static(path):
     return send_from_directory('static', path)
 
+@app.route('/assets/<path:path>')
+def serve_assets(path):
+    return send_from_directory('static/assets', path)
+
 @app.route('/uploads/<filename>')
 @login_required
 def serve_upload(filename):
@@ -268,15 +255,15 @@ def serve_upload(filename):
 # Обработка ошибок
 @app.errorhandler(404)
 def not_found(error):
-    return render_template('error/404.html'), 404
+    return render_template('404.html'), 404
 
 @app.errorhandler(403)
 def forbidden(error):
-    return render_template('error/403.html'), 403
+    return render_template('403.html'), 403
 
 @app.errorhandler(500)
 def internal_error(error):
-    return render_template('error/500.html'), 500
+    return render_template('500.html'), 500
 
 # Регистрация маршрутов из других модулей
 def register_routes():
