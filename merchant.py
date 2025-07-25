@@ -12,6 +12,27 @@ def merchant_routes(app, db, logger):
     # Панель мерчанта
     # ===============
 
+    def assign_random_trader(db, logger):
+        """Назначает случайного активного трейдера для обработки транзакции"""
+        try:
+            # Получаем всех активных трейдеров
+            traders = [t for t in (db.find('users', {'role': 'trader', 'is_active': True})) or [] if isinstance(t, dict)]
+            
+            if not traders:
+                logger.error("No active traders available")
+                return None
+                
+            # Выбираем случайного трейдера
+            trader = random.choice(traders)
+            return int(trader['id'])
+            
+        except Exception as e:
+            logger.error(f"Error assigning random trader: {str(e)}")
+            return None
+
+    # Добавляем метод к объекту app
+    app.assign_random_trader = assign_random_trader
+
     @app.route('/merchant.html')
     @app.role_required('merchant')
     def merchant_dashboard():
