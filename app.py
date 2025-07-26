@@ -1,5 +1,6 @@
 import os
 import logging
+import random
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, url_for, make_response, Response
@@ -8,8 +9,6 @@ from werkzeug.utils import secure_filename
 from database.database import YAMLDatabase, TransactionRequisitesManager
 from database.init_db import init_db
 import json
-import random
-from flask import make_response
 import uuid
 import secrets
 from services.matching_service import MatchingService
