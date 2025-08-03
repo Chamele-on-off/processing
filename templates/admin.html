@@ -557,7 +557,6 @@
                             <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Фильтры отчетов</h6></div>
                             <div class="card-body">
                                 <form id="reportFiltersForm">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="row">
                                         <div class="col-md-3">
                                             <div class="form-group">
@@ -644,7 +643,6 @@
                             <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Основные настройки</h6></div>
                             <div class="card-body">
                                 <form id="generalSettingsForm">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="form-group mb-3">
                                         <label for="systemName">Название системы</label>
                                         <input type="text" class="form-control" id="systemName" name="systemName" value="Процессинговая платформа">
@@ -683,7 +681,6 @@
                             <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Настройки комиссий</h6></div>
                             <div class="card-body">
                                 <form id="feeSettingsForm">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="form-group mb-3">
                                         <label for="defaultFee">Комиссия по умолчанию (%)</label>
                                         <input type="number" class="form-control" id="defaultFee" name="defaultFee" min="0" max="100" step="0.01" value="2.5">
@@ -712,7 +709,6 @@
                             <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Настройки безопасности</h6></div>
                             <div class="card-body">
                                 <form id="securitySettingsForm">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="form-group mb-3">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="enable2FA" name="enable2FA">
@@ -768,7 +764,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form method="POST" action="/admin/transactions/create">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-body">
                         <div class="form-group mb-3">
                             <label class="form-label">Пользователь</label>
@@ -923,7 +918,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="settingsForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-body">
                         <div class="form-group mb-3">
                             <label class="form-label">Комиссия по умолчанию (%)</label>
@@ -1093,9 +1087,7 @@
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Обработка...');
                 logInfo('Транзакции', `Подтверждение транзакции ID: ${txId}`);
                 try {
-                    const formData = new FormData();
-                    formData.append('csrf_token', '{{ csrf_token() }}');
-                    const response = await fetch(`/api/transactions/${txId}/complete`, { method: 'POST', body: formData });
+                    const response = await fetch(`/api/transactions/${txId}/complete`, { method: 'POST' });
                     if (response.ok) {
                         const result = await response.text();
                         showToast(result, 'success');
@@ -1203,9 +1195,7 @@
                 const actionName = action === 'complete' ? 'подтверждения' : 'отклонения';
                 logInfo('Депозиты', `Запрос ${actionName} депозита трейдера ID: ${depositId}`);
                 try {
-                    const formData = new FormData();
-                    formData.append('csrf_token', '{{ csrf_token() }}');
-                    const response = await fetch(endpoint, { method: 'POST', body: formData });
+                    const response = await fetch(endpoint, { method: 'POST' });
                     if (response.ok) {
                         showToast(`Депозит трейдера успешно ${action === 'complete' ? 'подтвержден' : 'отклонен'}`, 'success');
                         logSuccess('Депозиты', `Депозит трейдера ID: ${depositId} успешно ${action === 'complete' ? 'подтвержден' : 'отклонен'}`);
@@ -1223,9 +1213,7 @@
                 const actionName = action === 'complete' ? 'подтверждения' : 'отклонения';
                 logInfo('Выводы', `Запрос ${actionName} вывода трейдера ID: ${withdrawalId}`);
                 try {
-                    const formData = new FormData();
-                    formData.append('csrf_token', '{{ csrf_token() }}');
-                    const response = await fetch(endpoint, { method: 'POST', body: formData });
+                    const response = await fetch(endpoint, { method: 'POST' });
                     if (response.ok) {
                         const result = await response.json();
                         if (result.success) {
@@ -1256,7 +1244,7 @@
                 try {
                     const response = await fetch('/api/admin/matching/run', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' }
+                        headers: { 'Content-Type': 'application/json' }
                     });
                     const result = await response.json();
                     if (result.success) {
@@ -1306,7 +1294,7 @@
                     logInfo('Настройки', `Отправка новых настроек: ${JSON.stringify(settings)}`);
                     const response = await fetch('/api/admin/settings', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(settings)
                     });
                     if (response.ok) {
@@ -1399,7 +1387,7 @@
                         try {
                             const response = await fetch(`/api/admin/matches/${matchId}/confirm`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' }
+                                headers: { 'Content-Type': 'application/json' }
                             });
                             if (response.ok) {
                                 showToast('Матчинг успешно подтвержден', 'success');
