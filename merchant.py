@@ -1,13 +1,9 @@
-from flask import render_template, jsonify, request, session, send_from_directory, redirect, url_for
+from flask import render_template, jsonify, request, session, redirect, url_for
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
-import uuid
 import os
 import logging
 import secrets
 import random
-from functools import wraps
-import time
 from threading import Lock
 
 # Настройка логгирования
@@ -139,10 +135,6 @@ def merchant_routes(app, db, logger):
             completed_matches = [m for m in matches if m.get('status') == 'completed']
             rejected_matches = [m for m in matches if m.get('status') == 'rejected']
 
-            # Получаем запросы на депозит и вывод
-            deposit_requests = db.find('deposit_requests', {'user_id': merchant_id})
-            withdrawal_requests = db.find('withdrawal_requests', {'user_id': merchant_id})
-
             return render_template(
                 'merchant.html',
                 user=user,
@@ -156,9 +148,7 @@ def merchant_routes(app, db, logger):
                 pending_matches=pending_matches,
                 completed_matches=completed_matches,
                 rejected_matches=rejected_matches,
-                current_date=datetime.now().strftime('%Y-%m-%d'),
-                deposit_requests=deposit_requests,
-                withdrawal_requests=withdrawal_requests
+                current_date=datetime.now().strftime('%Y-%m-%d')
             )
             
         except Exception as e:
@@ -167,7 +157,6 @@ def merchant_routes(app, db, logger):
 
     @app.route('/api/merchant/transactions', methods=['POST'])
     @app.role_required('merchant')
-    @app.csrf_protect
     def create_merchant_transaction():
         user = app.get_current_user()
         if not user:
@@ -228,7 +217,6 @@ def merchant_routes(app, db, logger):
 
     @app.route('/api/merchant/transactions/<tx_id>/cancel', methods=['POST'])
     @app.role_required('merchant')
-    @app.csrf_protect
     def cancel_merchant_transaction(tx_id):
         user = app.get_current_user()
         if not user:
@@ -259,110 +247,8 @@ def merchant_routes(app, db, logger):
             logger.error(f"Error canceling transaction: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/merchant/transactions/<int:tx_id>/requisites', methods=['POST'])
-    @app.role_required('merchant')
-    @app.csrf_protect
-    def save_requisites(tx_id):
-        user = app.get_current_user()
-        if not user:
-            return jsonify({'error': 'Unauthorized'}), 401
-            
-        try:
-            data = request.get_json()
-            if not data:
-                return jsonify({'error': 'No data provided'}), 400
-                
-            # Проверяем существование транзакции
-            tx = db.find_one('transactions', {'id': tx_id, 'merchant_id': user['id']})
-            if not tx:
-                return jsonify({'error': 'Transaction not found or access denied'}), 404
-                
-            if tx.get('status') != 'pending':
-                return jsonify({'error': 'Can only add requisites to pending transactions'}), 400
-                
-            # Валидация реквизитов в зависимости от типа
-            req_type = data.get('type')
-            if not req_type:
-                return jsonify({'error': 'Missing requisites type'}), 400
-                
-            errors = []
-            if req_type == 'bank':
-                required = ['bank_name', 'bik', 'account_number', 'account_holder']
-                for field in required:
-                    if not data.get(field):
-                        errors.append(f"Missing required field: {field}")
-            elif req_type == 'card':
-                required = ['card_number', 'card_holder', 'expiry_date']
-                for field in required:
-                    if not data.get(field):
-                        errors.append(f"Missing required field: {field}")
-            elif req_type == 'crypto':
-                if not data.get('wallet_address'):
-                    errors.append("Missing wallet address")
-            else:
-                errors.append(f"Invalid requisites type: {req_type}")
-                
-            if errors:
-                return jsonify({'error': 'Validation failed', 'details': errors}), 400
-                
-            requisites = {
-                'transaction_id': tx_id,
-                'type': req_type,
-                'bank_name': data.get('bank_name'),
-                'bik': data.get('bik'),
-                'account_number': data.get('account_number'),
-                'account_holder': data.get('account_holder'),
-                'card_number': data.get('card_number'),
-                'card_holder': data.get('card_holder'),
-                'expiry_date': data.get('expiry_date'),
-                'crypto_type': data.get('crypto_type'),
-                'wallet_address': data.get('wallet_address'),
-                'created_at': datetime.now().isoformat(),
-                'added_by': user['id']
-            }
-            
-            # Сохраняем реквизиты
-            db.insert_one('requisites', requisites)
-            
-            # Обновляем статус транзакции
-            db.update_one('transactions', {'id': tx_id}, {
-                'requisites_approved': True,
-                'updated_at': datetime.now().isoformat()
-            })
-            
-            logger.info(f"Saved requisites for transaction {tx_id}")
-            return jsonify({'success': True})
-            
-        except Exception as e:
-            logger.error(f"Error saving requisites: {str(e)}", exc_info=True)
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/merchant/transactions/<int:tx_id>/requisites', methods=['GET'])
-    @app.role_required('merchant')
-    def get_requisites(tx_id):
-        user = app.get_current_user()
-        if not user:
-            return jsonify({'error': 'Unauthorized'}), 401
-            
-        try:
-            # Проверяем что транзакция принадлежит мерчанту
-            tx = db.find_one('transactions', {'id': tx_id, 'merchant_id': user['id']})
-            if not tx:
-                return jsonify({'error': 'Transaction not found or access denied'}), 404
-                
-            requisites = db.find('requisites', {'transaction_id': tx_id})
-            if not requisites:
-                return jsonify({'error': 'Requisites not found'}), 404
-                
-            return jsonify(requisites)
-            
-        except Exception as e:
-            logger.error(f"Error getting requisites: {str(e)}", exc_info=True)
-            return jsonify({'error': str(e)}), 500
-
     @app.route('/api/merchant/api_keys', methods=['POST'])
     @app.role_required('merchant')
-    @app.csrf_protect
     def generate_merchant_api_key():
         user = app.get_current_user()
         if not user:
@@ -394,7 +280,6 @@ def merchant_routes(app, db, logger):
 
     @app.route('/api/merchant/api_keys/<key_id>', methods=['DELETE'])
     @app.role_required('merchant')
-    @app.csrf_protect
     def revoke_merchant_api_key(key_id):
         user = app.get_current_user()
         if not user:
@@ -415,30 +300,8 @@ def merchant_routes(app, db, logger):
             logger.error(f"Error revoking API key: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/merchant/matches', methods=['GET'])
-    @app.role_required('merchant')
-    def get_merchant_matches():
-        user = app.get_current_user()
-        if not user:
-            return jsonify({'error': 'Unauthorized'}), 401
-            
-        try:
-            status = request.args.get('status', 'pending')
-            
-            matches = db.find('matches', {
-                'merchant_id': user['id'],
-                'status': status
-            })
-            
-            return jsonify(matches)
-            
-        except Exception as e:
-            logger.error(f"Error getting matches: {str(e)}", exc_info=True)
-            return jsonify({'error': str(e)}), 500
-
     @app.route('/api/merchant/matches/<match_id>/confirm', methods=['POST'])
     @app.role_required('merchant')
-    @app.csrf_protect
     def merchant_confirm_match(match_id):
         user = app.get_current_user()
         if not user:
@@ -463,79 +326,11 @@ def merchant_routes(app, db, logger):
                 'updated_at': datetime.now().isoformat()
             })
             
-            # Обновляем статусы связанных транзакций
-            for dep_id in match.get('deposit_ids', []):
-                db.update_one('transactions', {'id': dep_id}, {
-                    'status': 'completed',
-                    'completed_at': datetime.now().isoformat(),
-                    'updated_at': datetime.now().isoformat()
-                })
-            
-            if match.get('withdrawal_id'):
-                db.update_one('transactions', {'id': match['withdrawal_id']}, {
-                    'status': 'completed',
-                    'completed_at': datetime.now().isoformat(),
-                    'updated_at': datetime.now().isoformat()
-                })
-            
             logger.info(f"Merchant {user['id']} confirmed match {match_id}")
             return jsonify({'success': True})
             
         except Exception as e:
             logger.error(f"Error confirming match: {str(e)}", exc_info=True)
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/merchant/matches/<match_id>/reject', methods=['POST'])
-    @app.role_required('merchant')
-    @app.csrf_protect
-    def reject_merchant_match(match_id):
-        user = app.get_current_user()
-        if not user:
-            return jsonify({'error': 'Unauthorized'}), 401
-            
-        try:
-            data = request.get_json()
-            reason = data.get('reason', 'No reason provided')
-            
-            match = db.find_one('matches', {
-                'id': int(match_id),
-                'merchant_id': user['id']
-            })
-            
-            if not match:
-                return jsonify({'error': 'Match not found or access denied'}), 404
-            
-            if match.get('status') != 'pending':
-                return jsonify({'error': 'Only pending matches can be rejected'}), 400
-            
-            updates = {
-                'status': 'rejected',
-                'rejected_at': datetime.now().isoformat(),
-                'rejected_by': user['id'],
-                'reason': reason,
-                'updated_at': datetime.now().isoformat()
-            }
-            
-            db.update_one('matches', {'id': int(match_id)}, updates)
-            
-            # Возвращаем транзакции в статус pending
-            for dep_id in match.get('deposit_ids', []):
-                db.update_one('transactions', {'id': dep_id}, {
-                    'status': 'pending',
-                    'updated_at': datetime.now().isoformat()
-                })
-            
-            if match.get('withdrawal_id'):
-                db.update_one('transactions', {'id': match['withdrawal_id']}, {
-                    'status': 'pending',
-                    'updated_at': datetime.now().isoformat()
-                })
-            
-            logger.info(f"Merchant {user['id']} rejected match {match_id}")
-            return jsonify({'success': True})
-            
-        except Exception as e:
-            logger.error(f"Error rejecting match: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/requisites/types', methods=['GET'])
