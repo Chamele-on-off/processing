@@ -452,7 +452,7 @@ app.calculate_weekly_stats = calculate_weekly_stats
 # Инъекция CSRF токена во все шаблоны
 @app.context_processor
 def inject_csrf_token():
-    return dict(csrf_token=session.get('csrf_token', ''))
+    return dict(csrf_token=generate_csrf_token())
 
 # ============
 # Routes
