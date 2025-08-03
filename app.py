@@ -107,16 +107,42 @@ class JSONDatabase:
         ]
         
         for user in test_users:
-            existing = self.find_one('users', {'email': user['email']})
-            if not existing:
-                user['id'] = self.get_next_id('users')
-                self.insert_one('users', user)
+            try:
+                existing = self.find_one('users', {'email': user['email']})
+                if not existing:
+                    user['id'] = self.get_next_id('users')
+                    self.insert_one('users', user)
+            except Exception as e:
+                logger.error(f"Error creating test user {user['email']}: {str(e)}")
+                continue
     
     def _read_file(self, file_type):
-        """Чтение данных из файла"""
+        """Чтение данных из файла с обработкой ошибок"""
+        file_path = self.db_files[file_type]
         with self.lock:
-            with open(self.db_files[file_type], 'r') as f:
-                return json.load(f)
+            try:
+                with open(file_path, 'r') as f:
+                    try:
+                        return json.load(f)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Invalid JSON in {file_path}, initializing with empty data")
+                        # Если файл поврежден, переинициализируем его
+                        default_data = [] if file_type != 'settings' else {
+                            'exchange_rates': {'USD': 1.0, 'EUR': 0.85, 'RUB': 75.0},
+                            'fees': {'deposit': 0.01, 'withdrawal': 0.02},
+                            'last_ids': {'transactions': 0, 'users': 0, 'matches': 0, 'requisites': 0}
+                        }
+                        with open(file_path, 'w') as f_write:
+                            json.dump(default_data, f_write)
+                        return default_data
+            except FileNotFoundError:
+                logger.warning(f"File {file_path} not found, initializing")
+                self.init_db()
+                return [] if file_type != 'settings' else {
+                    'exchange_rates': {'USD': 1.0, 'EUR': 0.85, 'RUB': 75.0},
+                    'fees': {'deposit': 0.01, 'withdrawal': 0.02},
+                    'last_ids': {'transactions': 0, 'users': 0, 'matches': 0, 'requisites': 0}
+                }
     
     def _write_file(self, file_type, data):
         """Запись данных в файл"""
@@ -134,6 +160,8 @@ class JSONDatabase:
     def find_one(self, collection, query):
         """Поиск одного документа в коллекции"""
         data = self._read_file(collection)
+        if not isinstance(data, list):
+            return None
         for item in data:
             if all(item.get(k) == v for k, v in query.items()):
                 return deepcopy(item)
@@ -142,6 +170,8 @@ class JSONDatabase:
     def find(self, collection, query=None):
         """Поиск всех документов в коллекции"""
         data = self._read_file(collection)
+        if not isinstance(data, list):
+            return []
         if query is None:
             return deepcopy(data)
         return [deepcopy(item) for item in data if all(item.get(k) == v for k, v in query.items())]
@@ -149,6 +179,8 @@ class JSONDatabase:
     def insert_one(self, collection, document):
         """Вставка одного документа в коллекцию"""
         data = self._read_file(collection)
+        if not isinstance(data, list):
+            data = []
         
         if 'id' not in document:
             document['id'] = self.get_next_id(collection)
@@ -163,8 +195,10 @@ class JSONDatabase:
     def update_one(self, collection, query, updates):
         """Обновление одного документа в коллекции"""
         data = self._read_file(collection)
-        updated = False
+        if not isinstance(data, list):
+            return False
         
+        updated = False
         for item in data:
             if all(item.get(k) == v for k, v in query.items()):
                 item.update(updates)
@@ -179,6 +213,9 @@ class JSONDatabase:
     def delete_one(self, collection, query):
         """Удаление одного документа из коллекции"""
         data = self._read_file(collection)
+        if not isinstance(data, list):
+            return False
+        
         new_data = [item for item in data if not all(item.get(k) == v for k, v in query.items())]
         
         if len(new_data) < len(data):
