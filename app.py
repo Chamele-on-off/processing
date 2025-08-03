@@ -3,16 +3,13 @@ import logging
 import json
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, url_for, make_response, Response
+from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-import random
 import uuid
-import secrets
 import time
 import threading
 from copy import deepcopy
-from collections import defaultdict
 
 # Настройка логгирования
 logging.basicConfig(
@@ -126,7 +123,6 @@ class JSONDatabase:
                         return json.load(f)
                     except json.JSONDecodeError:
                         logger.warning(f"Invalid JSON in {file_path}, initializing with empty data")
-                        # Если файл поврежден, переинициализируем его
                         default_data = [] if file_type != 'settings' else {
                             'exchange_rates': {'USD': 1.0, 'EUR': 0.85, 'RUB': 75.0},
                             'fees': {'deposit': 0.01, 'withdrawal': 0.02},
@@ -246,7 +242,6 @@ class MatchingService:
     def find_match(self, transaction):
         """Поиск совпадения для транзакции"""
         with self.lock:
-            # Получаем все противоположные транзакции
             opposite_type = 'withdrawal' if transaction['type'] == 'deposit' else 'deposit'
             candidates = self.db.find('transactions', {
                 'type': opposite_type,
@@ -255,16 +250,13 @@ class MatchingService:
                 'amount': transaction['amount']
             })
             
-            # Ищем лучшую кандидатуру
             for candidate in candidates:
-                # Проверяем, что транзакции еще не связаны
                 existing_match = self.db.find_one('matches', {
                     'transaction_id': transaction['id'],
                     'matched_transaction_id': candidate['id']
                 })
                 
                 if not existing_match:
-                    # Создаем запись о совпадении
                     match_id = self.db.get_next_id('matches')
                     match_record = {
                         'id': match_id,
@@ -276,20 +268,16 @@ class MatchingService:
                     }
                     
                     self.db.insert_one('matches', match_record)
-                    
-                    # Обновляем статусы транзакций
                     self.db.update_one('transactions', {'id': transaction['id']}, {'status': 'matched'})
                     self.db.update_one('transactions', {'id': candidate['id']}, {'status': 'matched'})
                     
                     return match_record
-            
             return None
     
     def process_matches(self):
         """Обработка всех ожидающих совпадений"""
         with self.lock:
             pending_transactions = self.db.find('transactions', {'status': 'pending'})
-            
             for transaction in pending_transactions:
                 self.find_match(transaction)
 
@@ -304,10 +292,6 @@ app.jinja_env.globals.update(zip=zip)
 # Конфигурация
 app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-key-123')
 app.config['SESSION_COOKIE_NAME'] = 'processing_session'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf'}
 
@@ -321,18 +305,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # ============
 # Helpers
 # ============
-
-def generate_csrf_token():
-    if 'csrf_token' not in session:
-        session['csrf_token'] = secrets.token_hex(16)
-    return session['csrf_token']
-
-def check_csrf_token():
-    if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
-        token = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token')
-        if not token or token != session.get('csrf_token'):
-            return jsonify({'error': 'Invalid CSRF token'}), 403
-    return None
 
 def authenticate(email, password):
     user = db.find_one('users', {'email': email})
@@ -410,15 +382,6 @@ def calculate_weekly_stats(transactions):
 # Decorators
 # ============
 
-def csrf_protect(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        response = check_csrf_token()
-        if response:
-            return response
-        return f(*args, **kwargs)
-    return decorated_function
-
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -441,18 +404,12 @@ def role_required(role):
 # Добавляем декораторы и вспомогательные методы к объекту app
 app.role_required = role_required
 app.login_required = login_required
-app.csrf_protect = csrf_protect
 app.get_current_user = get_current_user
 app.allowed_file = allowed_file
 app.calculate_avg_processing_time = calculate_avg_processing_time
 app.generate_activity_data = generate_activity_data
 app.calculate_conversion_rate = calculate_conversion_rate
 app.calculate_weekly_stats = calculate_weekly_stats
-
-# Инъекция CSRF токена во все шаблоны
-@app.context_processor
-def inject_csrf_token():
-    return dict(csrf_token=generate_csrf_token())
 
 # ============
 # Routes
@@ -478,7 +435,6 @@ def login():
         session['user_id'] = user['id']
         session['role'] = user['role']
         session.permanent = True
-        generate_csrf_token()
         
         if request.is_json:
             return jsonify({
@@ -530,7 +486,6 @@ def admin_dashboard():
 @app.route('/admin/update_settings', methods=['POST'])
 @login_required
 @role_required('admin')
-@csrf_protect
 def update_settings():
     data = request.get_json()
     if not data:
@@ -567,7 +522,6 @@ def trader_dashboard():
 @app.route('/trader/process_transaction', methods=['POST'])
 @login_required
 @role_required('trader')
-@csrf_protect
 def process_transaction():
     data = request.get_json()
     if not data or 'transaction_id' not in data:
@@ -607,7 +561,6 @@ def merchant_dashboard():
 @app.route('/merchant/create_transaction', methods=['POST'])
 @login_required
 @role_required('merchant')
-@csrf_protect
 def create_transaction():
     data = request.get_json()
     if not data or 'amount' not in data or 'currency' not in data or 'type' not in data:
