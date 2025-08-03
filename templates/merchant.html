@@ -9,287 +9,187 @@
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
         :root {
-            --sidebar-bg: #1a1a2e;
-            --sidebar-text: #ffffff;
-            --sidebar-active-bg: #16213e;
-            --sidebar-hover-bg: #0f3460;
-            --primary: #4e73df;
-            --success: #1cc88a;
-            --info: #36b9cc;
-            --warning: #f6c23e;
-            --danger: #e74a3b;
+            --primary-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #e9ecef;
+            --primary-accent: #4a6fa5;
+            --success-accent: #4caf50;
+            --warning-accent: #ff9800;
+            --danger-accent: #f44336;
+            --info-accent: #2196f3;
         }
-        
+
         body {
-            background-color: #f8f9fc;
-            font-family: 'Nunito', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
         }
-        
+
         .sidebar {
-            min-height: 100vh;
-            background-color: var(--sidebar-bg);
-            color: var(--sidebar-text);
-            transition: margin 0.25s ease-out;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            width: 220px;
         }
-        
-        .sidebar .sidebar-heading {
+
+        .sidebar-brand {
+            padding: 1.5rem 1rem;
             font-size: 1.2rem;
-            padding: 1rem;
-            color: #ffffff;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            border-radius: 0.25rem;
-            padding: 0.75rem 1rem;
-            margin: 0.25rem 0.5rem;
-            transition: all 0.3s;
-        }
-        
-        .sidebar .nav-link.active {
             font-weight: 600;
-            color: white;
-            background-color: var(--sidebar-active-bg);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
         }
-        
-        .sidebar .nav-link:hover:not(.active) {
-            background-color: var(--sidebar-hover-bg);
-            color: white;
+
+        .nav-link {
+            color: var(--text-secondary);
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            margin: 0.25rem 0;
         }
-        
-        .sidebar .nav-link i {
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-accent);
+            background-color: rgba(74, 111, 165, 0.1);
+        }
+
+        .nav-link i {
             width: 20px;
             text-align: center;
             margin-right: 10px;
         }
-        
+
         .main-content {
-            background-color: #f8f9fc;
-            min-height: 100vh;
-            padding: 20px;
+            margin-left: 220px;
+            padding: 2rem;
         }
-        
-        .balance-card {
-            border-radius: 10px;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-            margin-bottom: 20px;
-            transition: transform 0.3s;
-        }
-        
-        .balance-card:hover {
-            transform: translateY(-5px);
-        }
-        
+
         .card {
-            border: none;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             margin-bottom: 1.5rem;
-            border-radius: 10px;
         }
-        
+
         .card-header {
-            background-color: #f8f9fc;
-            border-bottom: 1px solid #e3e6f0;
-            padding: 1rem 1.35rem;
-            border-radius: 10px 10px 0 0 !important;
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
             font-weight: 600;
         }
-        
+
+        .stat-card {
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-card .icon {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+        }
+
         .badge {
-            font-size: 0.85em;
-            font-weight: 600;
+            font-weight: 500;
             padding: 0.5em 0.75em;
         }
-        
+
+        .badge-success {
+            background-color: var(--success-accent);
+        }
+
+        .badge-warning {
+            background-color: var(--warning-accent);
+        }
+
+        .badge-danger {
+            background-color: var(--danger-accent);
+        }
+
+        .badge-info {
+            background-color: var(--info-accent);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-accent);
+            border-color: var(--primary-accent);
+        }
+
+        .btn-success {
+            background-color: var(--success-accent);
+            border-color: var(--success-accent);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-accent);
+            border-color: var(--danger-accent);
+        }
+
+        .btn-info {
+            background-color: var(--info-accent);
+            border-color: var(--info-accent);
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table th {
+            border-top: none;
+            font-weight: 600;
+        }
+
         .page-section {
             display: none;
-            animation: fadeIn 0.3s ease-in-out;
         }
-        
+
         .page-section.active {
             display: block;
+            animation: fadeIn 0.3s ease-in-out;
         }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        
-        .quick-actions .btn {
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-        
+
         .api-key {
             font-family: 'Roboto Mono', monospace;
-            background-color: #f8f9fa;
-            padding: 0.5rem;
+            background-color: var(--primary-bg);
+            padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
-            word-break: break-all;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
-        
-        #toast-container {
+
+        .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 1100;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
         }
-        
-        .toast {
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-        
+
         .nav-tabs .nav-link.active {
+            color: var(--primary-accent);
+            border-bottom: 2px solid var(--primary-accent);
             font-weight: 600;
-            color: var(--primary);
-            border-bottom: 2px solid var(--primary);
-        }
-        
-        .table-responsive {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
-        }
-        
-        table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        
-        table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #e3e6f0;
-            font-weight: 600;
-            color: #5a5c69;
-        }
-        
-        table tbody tr:hover {
-            background-color: rgba(0, 0, 0, 0.02);
         }
 
-        /* Стили для консоли логов */
-        #log-console {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 200px;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            padding: 10px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-            border-top: 1px solid #444;
-        }
-
-        #log-console .log-entry {
-            margin-bottom: 5px;
-            line-height: 1.3;
-        }
-
-        #log-console .log-time {
-            color: #6a9955;
-        }
-
-        #log-console .log-method {
-            color: #569cd6;
-        }
-
-        #log-console .log-url {
-            color: #9cdcfe;
-        }
-
-        #log-console .log-status {
-            color: #b5cea8;
-        }
-
-        #log-console .log-error {
-            color: #f48771;
-        }
-
-        #log-console .log-success {
-            color: #4ec9b0;
-        }
-
-        #log-console .log-info {
-            color: #c586c0;
-        }
-
-        #log-toggle {
-            position: fixed;
-            bottom: 210px;
-            right: 20px;
-            z-index: 1001;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s;
-        }
-
-        #log-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        /* Градиент для карточек баланса */
-        .border-primary {
-            border-left: 5px solid var(--primary) !important;
-            background: linear-gradient(to right, rgba(78, 115, 223, 0.1), transparent);
-        }
-
-        .border-success {
-            border-left: 5px solid var(--success) !important;
-            background: linear-gradient(to right, rgba(28, 200, 138, 0.1), transparent);
-        }
-
-        .border-info {
-            border-left: 5px solid var(--info) !important;
-            background: linear-gradient(to right, rgba(54, 185, 204, 0.1), transparent);
-        }
-
-        .border-warning {
-            border-left: 5px solid var(--warning) !important;
-            background: linear-gradient(to right, rgba(246, 194, 62, 0.1), transparent);
-        }
-
-        /* Анимации */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        /* Адаптивные стили */
         @media (max-width: 768px) {
             .sidebar {
-                width: 100% !important;
+                width: 100%;
                 height: auto;
                 position: relative;
             }
             .main-content {
                 margin-left: 0;
-            }
-            .balance-card {
-                margin-bottom: 15px;
             }
         }
     </style>
@@ -297,11 +197,11 @@
 <body>
     <div class="d-flex">
         <!-- Sidebar -->
-        <div class="sidebar flex-shrink-0 p-3" style="width: 250px;">
-            <div class="sidebar-heading">
+        <div class="sidebar">
+            <div class="sidebar-brand">
                 <i class="fas fa-store me-2"></i>Мерчант
             </div>
-            <ul class="nav flex-column mb-auto">
+            <ul class="nav flex-column px-2 pt-3">
                 <li class="nav-item">
                     <a href="#" class="nav-link active" data-section="dashboard">
                         <i class="fas fa-tachometer-alt"></i> Дашборд
@@ -326,107 +226,80 @@
         </div>
 
         <!-- Main Content -->
-        <div class="main-content flex-grow-1">
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
-                <div class="container-fluid">
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
-                        <i class="fas fa-bars"></i>
+        <div class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Дашборд мерчанта</h1>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i> {{ user.email }}
                     </button>
-                    
-                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                        <div class="ms-auto d-flex">
-                            <div class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user-circle me-1"></i> {{ user.email }}
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item" href="/logout">
-                                            <i class="fas fa-sign-out-alt me-2"></i> Выйти
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Выйти</a></li>
+                    </ul>
                 </div>
-            </nav>
+            </div>
 
             <!-- Dashboard Section -->
             <div id="dashboard-section" class="page-section active">
-                <h1 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i>Дашборд</h1>
-                
                 <div class="row">
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card balance-card border-start border-primary border-5">
+                    <div class="col-md-3 mb-4">
+                        <div class="card stat-card h-100">
                             <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                            Доступный баланс</div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            {{ "%.2f"|format(user.balance) }} ₽
-                                        </div>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="text-muted mb-2">Баланс</h6>
+                                        <h4 class="mb-0">{{ "%.2f"|format(user.balance) }} ₽</h4>
                                     </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                                    <div class="icon">
+                                        <i class="fas fa-wallet"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card balance-card border-start border-success border-5">
+                    <div class="col-md-3 mb-4">
+                        <div class="card stat-card h-100">
                             <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                            Транзакций сегодня</div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            {{ stats.today_transactions }}
-                                        </div>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="text-muted mb-2">Транзакций сегодня</h6>
+                                        <h4 class="mb-0">{{ stats.today_transactions }}</h4>
                                     </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                    <div class="icon">
+                                        <i class="fas fa-exchange-alt"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card balance-card border-start border-info border-5">
+                    <div class="col-md-3 mb-4">
+                        <div class="card stat-card h-100">
                             <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                            Средняя сумма</div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            {{ "%.2f"|format(stats.avg_amount) }} ₽
-                                        </div>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="text-muted mb-2">Средняя сумма</h6>
+                                        <h4 class="mb-0">{{ "%.2f"|format(stats.avg_amount) }} ₽</h4>
                                     </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-ruble-sign fa-2x text-gray-300"></i>
+                                    <div class="icon">
+                                        <i class="fas fa-ruble-sign"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card balance-card border-start border-warning border-5">
+                    <div class="col-md-3 mb-4">
+                        <div class="card stat-card h-100">
                             <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                            Конверсия</div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            {{ "%.1f"|format(stats.conversion_rate) }}%
-                                        </div>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="text-muted mb-2">Конверсия</h6>
+                                        <h4 class="mb-0">{{ "%.1f"|format(stats.conversion_rate) }}%</h4>
                                     </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                                    <div class="icon">
+                                        <i class="fas fa-percentage"></i>
                                     </div>
                                 </div>
                             </div>
@@ -436,18 +309,16 @@
                 
                 <div class="row">
                     <div class="col-lg-8 mb-4">
-                        <div class="card">
+                        <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="m-0 font-weight-bold text-primary">Последние транзакции</h6>
-                                <div class="quick-actions">
-                                    <button class="btn btn-sm btn-primary" id="newTransactionBtn">
-                                        <i class="fas fa-plus me-1"></i> Новая транзакция
-                                    </button>
-                                </div>
+                                <h6 class="mb-0">Последние транзакции</h6>
+                                <button class="btn btn-sm btn-primary" id="newTransactionBtn">
+                                    <i class="fas fa-plus me-1"></i> Новая
+                                </button>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table table-bordered table-hover" id="recentTransactionsTable">
+                                    <table class="table table-hover" id="recentTransactionsTable">
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
@@ -465,7 +336,7 @@
                                                 <td>{{ 'Пополнение' if tx.type == 'deposit' else 'Вывод' }}</td>
                                                 <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
                                                 <td>
-                                                    <span class="badge bg-{{ 
+                                                    <span class="badge badge-{{ 
                                                         'success' if tx.status == 'completed' 
                                                         else 'warning' if tx.status == 'pending' 
                                                         else 'danger' 
@@ -476,15 +347,15 @@
                                                 <td>{{ tx.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
                                                 <td>
                                                     {% if tx.status == 'pending' %}
-                                                    <button class="btn btn-sm btn-danger cancel-tx" data-tx-id="{{ tx.id }}" title="Отменить">
+                                                    <button class="btn btn-sm btn-outline-danger cancel-tx" data-tx-id="{{ tx.id }}" title="Отменить">
                                                         <i class="fas fa-times"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-info add-requisites-btn" data-tx-id="{{ tx.id }}" title="Реквизиты">
+                                                    <button class="btn btn-sm btn-outline-info add-requisites-btn" data-tx-id="{{ tx.id }}" title="Реквизиты">
                                                         <i class="fas fa-credit-card"></i>
                                                     </button>
                                                     {% endif %}
                                                     {% if tx.status == 'completed' and tx.requisites %}
-                                                    <button class="btn btn-sm btn-secondary show-requisites-btn" data-tx-id="{{ tx.id }}" title="Показать реквизиты">
+                                                    <button class="btn btn-sm btn-outline-secondary show-requisites-btn" data-tx-id="{{ tx.id }}" title="Показать реквизиты">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                     {% endif %}
@@ -499,27 +370,12 @@
                     </div>
                     
                     <div class="col-lg-4 mb-4">
-                        <div class="card">
+                        <div class="card h-100">
                             <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">Статистика за неделю</h6>
+                                <h6 class="mb-0">Активность за неделю</h6>
                             </div>
                             <div class="card-body">
-                                <div style="height: 250px;">
-                                    <canvas id="weeklyStatsChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">Быстрые действия</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex flex-wrap quick-actions">
-                                    <button class="btn btn-primary" id="newTransactionBtn2">
-                                        <i class="fas fa-plus me-2"></i> Новая транзакция
-                                    </button>
-                                </div>
+                                <canvas id="weeklyStatsChart" height="250"></canvas>
                             </div>
                         </div>
                     </div>
@@ -527,14 +383,12 @@
             </div>
 
             <!-- Transactions Section -->
-            <div id="transactions-section" class="container-fluid px-0 py-0 page-section">
+            <div id="transactions-section" class="page-section">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1><i class="fas fa-exchange-alt me-2"></i>Транзакции</h1>
-                    <div class="quick-actions">
-                        <button class="btn btn-primary" id="newTransactionBtn2">
-                            <i class="fas fa-plus me-2"></i> Новая транзакция
-                        </button>
-                    </div>
+                    <h1 class="h3 mb-0">Транзакции</h1>
+                    <button class="btn btn-primary" id="newTransactionBtn2">
+                        <i class="fas fa-plus me-1"></i> Новая транзакция
+                    </button>
                 </div>
                 
                 <div class="card">
@@ -556,7 +410,7 @@
                         <div class="tab-content">
                             <div class="tab-pane fade show active" id="all-transactions">
                                 <div class="table-responsive">
-                                    <table class="table table-bordered table-hover" id="transactionsTable">
+                                    <table class="table table-hover" id="transactionsTable">
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
@@ -574,7 +428,7 @@
                                                 <td>{{ 'Пополнение' if tx.type == 'deposit' else 'Вывод' }}</td>
                                                 <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
                                                 <td>
-                                                    <span class="badge bg-{{ 
+                                                    <span class="badge badge-{{ 
                                                         'success' if tx.status == 'completed' 
                                                         else 'warning' if tx.status == 'pending' 
                                                         else 'danger' 
@@ -585,15 +439,15 @@
                                                 <td>{{ tx.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
                                                 <td>
                                                     {% if tx.status == 'pending' %}
-                                                    <button class="btn btn-sm btn-danger cancel-tx" data-tx-id="{{ tx.id }}" title="Отменить">
+                                                    <button class="btn btn-sm btn-outline-danger cancel-tx" data-tx-id="{{ tx.id }}" title="Отменить">
                                                         <i class="fas fa-times"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-info add-requisites-btn" data-tx-id="{{ tx.id }}" title="Реквизиты">
+                                                    <button class="btn btn-sm btn-outline-info add-requisites-btn" data-tx-id="{{ tx.id }}" title="Реквизиты">
                                                         <i class="fas fa-credit-card"></i>
                                                     </button>
                                                     {% endif %}
                                                     {% if tx.status == 'completed' and tx.requisites %}
-                                                    <button class="btn btn-sm btn-secondary show-requisites-btn" data-tx-id="{{ tx.id }}" title="Показать реквизиты">
+                                                    <button class="btn btn-sm btn-outline-secondary show-requisites-btn" data-tx-id="{{ tx.id }}" title="Показать реквизиты">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                     {% endif %}
@@ -607,7 +461,7 @@
                             
                             <div class="tab-pane fade" id="pending-transactions">
                                 <div class="table-responsive">
-                                    <table class="table table-bordered table-hover" id="pendingTransactionsTable">
+                                    <table class="table table-hover" id="pendingTransactionsTable">
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
@@ -625,10 +479,10 @@
                                                 <td>{{ "%.2f"|format(tx.amount) }} ₽</td>
                                                 <td>{{ tx.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-danger cancel-tx" data-tx-id="{{ tx.id }}" title="Отменить">
+                                                    <button class="btn btn-sm btn-outline-danger cancel-tx" data-tx-id="{{ tx.id }}" title="Отменить">
                                                         <i class="fas fa-times"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-info add-requisites-btn" data-tx-id="{{ tx.id }}" title="Реквизиты">
+                                                    <button class="btn btn-sm btn-outline-info add-requisites-btn" data-tx-id="{{ tx.id }}" title="Реквизиты">
                                                         <i class="fas fa-credit-card"></i>
                                                     </button>
                                                 </td>
@@ -641,7 +495,7 @@
                             
                             <div class="tab-pane fade" id="completed-transactions">
                                 <div class="table-responsive">
-                                    <table class="table table-bordered table-hover" id="completedTransactionsTable">
+                                    <table class="table table-hover" id="completedTransactionsTable">
                                         <thead>
                                             <tr>
                                                 <th>ID</th>
@@ -660,7 +514,7 @@
                                                 <td>{{ tx.completed_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
                                                 <td>
                                                     {% if tx.requisites %}
-                                                    <button class="btn btn-sm btn-secondary show-requisites-btn" data-tx-id="{{ tx.id }}" title="Показать реквизиты">
+                                                    <button class="btn btn-sm btn-outline-secondary show-requisites-btn" data-tx-id="{{ tx.id }}" title="Показать реквизиты">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                     {% endif %}
@@ -677,22 +531,22 @@
             </div>
 
             <!-- API Section -->
-            <div id="api-section" class="container-fluid px-0 py-0 page-section">
+            <div id="api-section" class="page-section">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1><i class="fas fa-code me-2"></i>API Ключи</h1>
+                    <h1 class="h3 mb-0">API Ключи</h1>
                     <button class="btn btn-primary" id="generateApiKeyBtn">
-                        <i class="fas fa-plus me-2"></i> Создать новый ключ
+                        <i class="fas fa-plus me-1"></i> Создать ключ
                     </button>
                 </div>
                 
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="m-0 font-weight-bold text-primary">Мои API ключи</h6>
+                        <h6 class="mb-0">Мои API ключи</h6>
                     </div>
                     <div class="card-body">
                         {% if api_keys %}
                             <div class="table-responsive">
-                                <table class="table table-bordered table-hover" id="apiKeysTable">
+                                <table class="table table-hover" id="apiKeysTable">
                                     <thead>
                                         <tr>
                                             <th>Ключ</th>
@@ -714,12 +568,12 @@
                                             </td>
                                             <td>{{ key.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
                                             <td>
-                                                <span class="badge bg-{{ 'success' if key.active else 'secondary' }}">
+                                                <span class="badge badge-{{ 'success' if key.active else 'secondary' }}">
                                                     {{ 'Активен' if key.active else 'Неактивен' }}
                                                 </span>
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-danger revoke-api-key" data-key-id="{{ key.id }}" title="Отозвать">
+                                                <button class="btn btn-sm btn-outline-danger revoke-api-key" data-key-id="{{ key.id }}" title="Отозвать">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
@@ -729,8 +583,8 @@
                                 </table>
                             </div>
                         {% else %}
-                            <div class="alert alert-info">
-                                У вас нет активных API ключей. Нажмите "Создать новый ключ" для генерации.
+                            <div class="alert alert-info mb-0">
+                                У вас нет активных API ключей. Нажмите "Создать ключ" для генерации.
                             </div>
                         {% endif %}
                     </div>
@@ -738,7 +592,7 @@
                 
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h6 class="m-0 font-weight-bold text-primary">Документация API</h6>
+                        <h6 class="mb-0">Документация API</h6>
                     </div>
                     <div class="card-body">
                         <h5>Базовый URL:</h5>
@@ -773,18 +627,6 @@ Body:
                             <li><strong>GET /transactions</strong> - Получить список транзакций</li>
                             <li><strong>POST /transactions/{id}/cancel</strong> - Отменить транзакцию</li>
                         </ul>
-                        
-                        <h5 class="mt-4">Пример ответа:</h5>
-                        <pre><code>{
-    "success": true,
-    "transaction": {
-        "id": 12345,
-        "status": "pending",
-        "amount": 1000,
-        "currency": "RUB",
-        "created_at": "2023-01-01T12:00:00Z"
-    }
-}</code></pre>
                     </div>
                 </div>
             </div>
@@ -801,7 +643,6 @@ Body:
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="transactionForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -904,8 +745,8 @@ Body:
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button type="submit" class="btn btn-primary">Создать транзакцию</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Создать</button>
                     </div>
                 </form>
             </div>
@@ -921,7 +762,6 @@ Body:
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="requisitesForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" id="requisitesTxId" name="tx_id">
                     <div class="modal-body">
                         <div class="mb-3">
@@ -938,7 +778,7 @@ Body:
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button type="submit" class="btn btn-primary">Сохранить</button>
                     </div>
                 </form>
@@ -958,7 +798,7 @@ Body:
                     <!-- Здесь будут отображаться реквизиты -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Закрыть</button>
                 </div>
             </div>
         </div>
@@ -971,12 +811,6 @@ Body:
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Консоль для логов -->
-    <button id="log-toggle" title="Показать/скрыть логи">
-        <i class="fas fa-terminal"></i>
-    </button>
-    <div id="log-console"></div>
 
     <script>
         // Инициализация графика
@@ -991,8 +825,8 @@ Body:
                     datasets: [{
                         label: 'Транзакции за неделю',
                         data: weeklyStats.counts,
-                        backgroundColor: 'rgba(78, 115, 223, 0.5)',
-                        borderColor: 'rgba(78, 115, 223, 1)',
+                        backgroundColor: 'rgba(74, 111, 165, 0.5)',
+                        borderColor: 'rgba(74, 111, 165, 1)',
                         borderWidth: 1
                     }]
                 },
@@ -1010,187 +844,7 @@ Body:
                     }
                 }
             });
-        });
 
-        // Логирование всех запросов
-        const originalFetch = window.fetch;
-        window.fetch = async function(...args) {
-            const startTime = new Date();
-            let method = 'GET';
-            let url = args[0];
-            
-            if (args[1]) {
-                method = args[1].method || 'GET';
-                url = typeof args[0] === 'string' ? args[0] : args[0].url;
-            }
-            
-            logRequest(method, url, args[1] ? args[1].body : null);
-            
-            try {
-                const response = await originalFetch.apply(this, args);
-                const endTime = new Date();
-                const duration = endTime - startTime;
-                
-                // Клонируем response для чтения body без потребления оригинального потока
-                const clonedResponse = response.clone();
-                let responseData = null;
-                
-                try {
-                    responseData = await clonedResponse.json();
-                } catch (e) {
-                    // Если не JSON, попробуем как текст
-                    try {
-                        responseData = await clonedResponse.text();
-                    } catch (e) {
-                        responseData = '[Не удалось прочитать ответ]';
-                    }
-                }
-                
-                logResponse(method, url, response.status, duration, responseData);
-                return response;
-            } catch (error) {
-                const endTime = new Date();
-                const duration = endTime - startTime;
-                logError(method, url, error, duration);
-                throw error;
-            }
-        };
-
-        // Функции логирования
-        function logRequest(method, url, body) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            
-            let bodyInfo = '';
-            if (body) {
-                try {
-                    const parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
-                    bodyInfo = `<span class="log-info">Body: ${JSON.stringify(parsedBody, null, 2)}</span>`;
-                } catch (e) {
-                    bodyInfo = `<span class="log-info">Body: ${body}</span>`;
-                }
-            }
-            
-            logEntry.innerHTML = `
-                <span class="log-time">[${time}]</span>
-                <span class="log-method">${method}</span>
-                <span class="log-url">${url}</span>
-                ${bodyInfo}
-            `;
-            
-            document.getElementById('log-console').appendChild(logEntry);
-            scrollLogsToBottom();
-        }
-
-        function logResponse(method, url, status, duration, data) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            
-            let dataInfo = '';
-            if (data) {
-                dataInfo = `<span class="log-info">Response: ${JSON.stringify(data, null, 2)}</span>`;
-            }
-            
-            logEntry.innerHTML = `
-                <span class="log-time">[${time}]</span>
-                <span class="log-method">${method}</span>
-                <span class="log-url">${url}</span>
-                <span class="log-status">${status}</span>
-                <span class="log-success">(${duration}ms)</span>
-                ${dataInfo}
-            `;
-            
-            document.getElementById('log-console').appendChild(logEntry);
-            scrollLogsToBottom();
-        }
-
-        function logError(method, url, error, duration) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            
-            logEntry.innerHTML = `
-                <span class="log-time">[${time}]</span>
-                <span class="log-method">${method}</span>
-                <span class="log-url">${url}</span>
-                <span class="log-error">ERROR: ${error.message}</span>
-                <span class="log-error">(${duration}ms)</span>
-            `;
-            
-            document.getElementById('log-console').appendChild(logEntry);
-            scrollLogsToBottom();
-        }
-
-        function scrollLogsToBottom() {
-            const console = document.getElementById('log-console');
-            console.scrollTop = console.scrollHeight;
-        }
-
-        // Переключение консоли логов
-        document.getElementById('log-toggle').addEventListener('click', function() {
-            const console = document.getElementById('log-console');
-            if (console.style.display === 'block') {
-                console.style.display = 'none';
-            } else {
-                console.style.display = 'block';
-            }
-        });
-
-        // Дополнительные функции логирования
-        function logInfo(category, message) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            logEntry.innerHTML = `
-                <span class="log-time">[${time}]</span>
-                <span class="log-info">[${category}] ${message}</span>
-            `;
-            document.getElementById('log-console').appendChild(logEntry);
-            scrollLogsToBottom();
-        }
-
-        function logSuccess(category, message) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            logEntry.innerHTML = `
-                <span class="log-time">[${time}]</span>
-                <span class="log-success">[${category}] ${message}</span>
-            `;
-            document.getElementById('log-console').appendChild(logEntry);
-            scrollLogsToBottom();
-        }
-
-        function logError(category, message, error) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            
-            let errorDetails = '';
-            if (error instanceof Error) {
-                errorDetails = `${error.message}<br>Stack: ${error.stack}`;
-            } else if (typeof error === 'object') {
-                errorDetails = JSON.stringify(error, null, 2);
-            } else {
-                errorDetails = String(error);
-            }
-            
-            logEntry.innerHTML = `
-                <span class="log-time">[${time}]</span>
-                <span class="log-error">[${category}] ${message}</span>
-                <div class="log-error-details">${errorDetails}</div>
-            `;
-            
-            document.getElementById('log-console').appendChild(logEntry);
-            scrollLogsToBottom();
-        }
-
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            logInfo('Инициализация', 'Загрузка панели мерчанта завершена');
-            
             // Навигация между разделами
             document.querySelectorAll('.nav-link[data-section]').forEach(item => {
                 item.addEventListener('click', function(e) {
@@ -1212,8 +866,6 @@ Body:
                     // Показываем выбранный раздел
                     const sectionId = this.getAttribute('data-section') + '-section';
                     document.getElementById(sectionId).classList.add('active');
-                    
-                    logInfo('Навигация', `Переход в раздел: ${this.getAttribute('data-section')}`);
                 });
             });
             
@@ -1258,19 +910,15 @@ Body:
                 pageLength: 10
             });
 
-            logInfo('DataTables', 'Все таблицы инициализированы');
-
             // Создание новой транзакции
             document.getElementById('newTransactionBtn').addEventListener('click', function() {
                 const modal = new bootstrap.Modal(document.getElementById('newTransactionModal'));
                 modal.show();
-                logInfo('Транзакции', 'Открыто модальное окно создания новой транзакции');
             });
 
             document.getElementById('newTransactionBtn2').addEventListener('click', function() {
                 const modal = new bootstrap.Modal(document.getElementById('newTransactionModal'));
                 modal.show();
-                logInfo('Транзакции', 'Открыто модальное окно создания новой транзакции');
             });
 
             // Изменение метода оплаты в форме транзакции
@@ -1319,13 +967,10 @@ Body:
                 // Добавляем реквизиты в запрос
                 requestData.requisites = requisites;
                 
-                logInfo('Транзакции', `Отправка запроса на создание транзакции: ${JSON.stringify(requestData)}`);
-                
                 fetch('/api/merchant/transactions', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token() }}'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestData)
                 })
@@ -1333,7 +978,6 @@ Body:
                 .then(data => {
                     if (data.success) {
                         showToast('Транзакция успешно создана', 'success');
-                        logSuccess('Транзакции', 'Транзакция успешно создана');
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
                         throw new Error(data.error || 'Ошибка создания транзакции');
@@ -1341,7 +985,6 @@ Body:
                 })
                 .catch(error => {
                     showToast(error.message, 'error');
-                    logError('Транзакции', 'Ошибка создания транзакции', error);
                 });
             });
 
@@ -1350,8 +993,6 @@ Body:
                 if (e.target.closest('.cancel-tx')) {
                     const btn = e.target.closest('.cancel-tx');
                     const txId = btn.dataset.txId;
-                    
-                    logInfo('Транзакции', `Запрос на отмену транзакции ID: ${txId}`);
                     
                     Swal.fire({
                         title: 'Вы уверены?',
@@ -1366,16 +1007,12 @@ Body:
                             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             
                             fetch(`/api/merchant/transactions/${txId}/cancel`, {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-Token': '{{ csrf_token() }}'
-                                }
+                                method: 'POST'
                             })
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
                                     showToast('Транзакция успешно отменена', 'success');
-                                    logSuccess('Транзакции', `Транзакция ID: ${txId} успешно отменена`);
                                     setTimeout(() => window.location.reload(), 1000);
                                 } else {
                                     throw new Error(data.error || 'Ошибка отмены транзакции');
@@ -1383,7 +1020,6 @@ Body:
                             })
                             .catch(error => {
                                 showToast(error.message, 'error');
-                                logError('Транзакции', `Ошибка отмены транзакции ID: ${txId}`, error);
                                 btn.disabled = false;
                                 btn.innerHTML = '<i class="fas fa-times"></i>';
                             });
@@ -1404,15 +1040,12 @@ Body:
                     
                     // Очищаем предыдущие поля
                     document.getElementById('requisitesFieldsContainer').innerHTML = '';
-                    logInfo('Транзакции', `Открыто модальное окно добавления реквизитов для транзакции ID: ${txId}`);
                 }
                 
                 // Показать реквизиты завершенной транзакции
                 if (e.target.closest('.show-requisites-btn')) {
                     const btn = e.target.closest('.show-requisites-btn');
                     const txId = btn.dataset.txId;
-                    
-                    logInfo('Транзакции', `Запрос реквизитов для транзакции ID: ${txId}`);
                     
                     fetch(`/api/merchant/transactions/${txId}/requisites`)
                         .then(response => response.json())
@@ -1444,14 +1077,12 @@ Body:
                                 
                                 container.innerHTML = html;
                                 modal.show();
-                                logSuccess('Транзакции', `Реквизиты для транзакции ID: ${txId} загружены`);
                             } else {
                                 throw new Error('Реквизиты не найдены');
                             }
                         })
                         .catch(error => {
                             showToast('Не удалось загрузить реквизиты', 'error');
-                            logError('Транзакции', `Ошибка загрузки реквизитов для транзакции ID: ${txId}`, error);
                         });
                 }
             });
@@ -1463,8 +1094,6 @@ Body:
                 container.innerHTML = '';
                 
                 if (!type) return;
-                
-                logInfo('Реквизиты', `Загрузка полей для типа: ${type}`);
                 
                 // Генерация полей в зависимости от типа
                 if (type === 'bank') {
@@ -1525,17 +1154,13 @@ Body:
                 const formData = new FormData(this);
                 const requestData = Object.fromEntries(formData.entries());
                 const txId = requestData.tx_id;
-                
-                logInfo('Реквизиты', `Отправка реквизитов для транзакции ID: ${txId}`);
 
                 delete requestData.tx_id;
-                delete requestData.csrf_token;
                 
                 fetch(`/api/merchant/transactions/${txId}/requisites`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token() }}'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestData)
                 })
@@ -1548,7 +1173,6 @@ Body:
                 .then(data => {
                     if (data.success) {
                         showToast('Реквизиты успешно сохранены', 'success');
-                        logSuccess('Реквизиты', `Реквизиты для транзакции ID: ${txId} сохранены`);
                         const modal = bootstrap.Modal.getInstance(document.getElementById('requisitesModal'));
                         modal.hide();
                         setTimeout(() => window.location.reload(), 1000);
@@ -1558,27 +1182,21 @@ Body:
                 })
                 .catch(error => {
                     showToast(error.message, 'error');
-                    logError('Реквизиты', 'Ошибка сохранения реквизитов', error);
                 });
             });
 
             // Генерация API ключа
             document.getElementById('generateApiKeyBtn').addEventListener('click', function() {
                 this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Генерация...';
-                logInfo('API', 'Запрос на генерацию нового API ключа');
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Генерация...';
                 
                 fetch('/api/merchant/api_keys', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-Token': '{{ csrf_token() }}'
-                    }
+                    method: 'POST'
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showToast('Новый API ключ успешно создан', 'success');
-                        logSuccess('API', 'Новый API ключ успешно создан');
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
                         throw new Error(data.error || 'Ошибка генерации ключа');
@@ -1586,9 +1204,8 @@ Body:
                 })
                 .catch(error => {
                     showToast(error.message, 'error');
-                    logError('API', 'Ошибка генерации API ключа', error);
                     this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-plus me-2"></i> Создать новый ключ';
+                    this.innerHTML = '<i class="fas fa-plus me-1"></i> Создать ключ';
                 });
             });
 
@@ -1597,8 +1214,6 @@ Body:
                 if (e.target.closest('.revoke-api-key')) {
                     const btn = e.target.closest('.revoke-api-key');
                     const keyId = btn.dataset.keyId;
-                    
-                    logInfo('API', `Запрос на отзыв API ключа ID: ${keyId}`);
                     
                     Swal.fire({
                         title: 'Вы уверены?',
@@ -1613,16 +1228,12 @@ Body:
                             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             
                             fetch(`/api/merchant/api_keys/${keyId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-Token': '{{ csrf_token() }}'
-                                }
+                                method: 'DELETE'
                             })
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
                                     showToast('API ключ успешно отозван', 'success');
-                                    logSuccess('API', `API ключ ID: ${keyId} успешно отозван`);
                                     setTimeout(() => window.location.reload(), 1000);
                                 } else {
                                     throw new Error(data.error || 'Ошибка отзыва ключа');
@@ -1630,7 +1241,6 @@ Body:
                             })
                             .catch(error => {
                                 showToast(error.message, 'error');
-                                logError('API', `Ошибка отзыва API ключа ID: ${keyId}`, error);
                                 btn.disabled = false;
                                 btn.innerHTML = '<i class="fas fa-trash"></i>';
                             });
@@ -1646,22 +1256,17 @@ Body:
                     if (secretSpan.style.display === 'none') {
                         secretSpan.style.display = 'inline';
                         btn.innerHTML = '<i class="fas fa-eye-slash"></i> Скрыть';
-                        logInfo('API', 'Показан секретный ключ API');
                     } else {
                         secretSpan.style.display = 'none';
                         btn.innerHTML = '<i class="fas fa-eye"></i> Показать';
-                        logInfo('API', 'Скрыт секретный ключ API');
                     }
                 }
             });
 
             // Функция показа уведомлений
             function showToast(message, type) {
-                const toastContainer = document.getElementById('toast-container');
-                if (!toastContainer) return;
-                
                 const toast = document.createElement('div');
-                toast.className = `toast show align-items-center text-white bg-${type} border-0`;
+                toast.className = `toast show align-items-center text-white bg-${type}`;
                 toast.setAttribute('role', 'alert');
                 toast.innerHTML = `
                     <div class="d-flex">
@@ -1672,7 +1277,7 @@ Body:
                     </div>
                 `;
                 
-                toastContainer.appendChild(toast);
+                document.body.appendChild(toast);
                 
                 setTimeout(() => {
                     toast.remove();
@@ -1680,6 +1285,5 @@ Body:
             }
         });
     </script>
-    <div id="toast-container"></div>
 </body>
 </html>
