@@ -369,6 +369,6 @@ def merchant_routes(app, db, logger):
         if method not in types_data:
             return jsonify({'error': 'Method not found'}), 404
         
-        return jsonify(types_data[method])
+        return jsonify(types_data[method]) 
 
     return app
