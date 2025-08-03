@@ -73,6 +73,44 @@ class JSONDatabase:
                             }, f)
                         else:
                             json.dump([], f)
+        
+        # Создание тестовых пользователей, если их нет
+        self.create_test_users()
+    
+    def create_test_users(self):
+        """Создание тестовых пользователей при инициализации"""
+        test_users = [
+            {
+                'email': 'admin@example.com',
+                'password_hash': generate_password_hash('admin123'),
+                'role': 'admin',
+                'name': 'Admin User',
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            },
+            {
+                'email': 'trader@example.com',
+                'password_hash': generate_password_hash('trader123'),
+                'role': 'trader',
+                'name': 'Trader User',
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            },
+            {
+                'email': 'merchant@example.com',
+                'password_hash': generate_password_hash('merchant123'),
+                'role': 'merchant',
+                'name': 'Merchant User',
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+        ]
+        
+        for user in test_users:
+            existing = self.find_one('users', {'email': user['email']})
+            if not existing:
+                user['id'] = self.get_next_id('users')
+                self.insert_one('users', user)
     
     def _read_file(self, file_type):
         """Чтение данных из файла"""
