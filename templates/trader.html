@@ -8,250 +8,319 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #34495e;
-            --accent-color: #3498db;
-            --light-color: #ecf0f1;
-            --dark-color: #2c3e50;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            --transition: all 0.3s ease;
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
         }
-
+        .nav-link {
+            color: #333;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .badge {
+            font-size: 0.85em;
+        }
+        .balance-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .quick-actions .btn {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f5f7fa;
-            color: #333;
         }
-
+        
         .sidebar {
-            min-height: 100vh;
-            background-color: var(--primary-color);
-            color: white;
-            width: 250px;
-            transition: var(--transition);
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
+        
         .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            border-radius: var(--border-radius);
+            color: #4a5568;
+            border-radius: 5px;
             margin: 2px 0;
-            padding: 10px 15px;
-            transition: var(--transition);
         }
-
-        .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
+        
         .sidebar .nav-link.active {
-            background-color: var(--accent-color);
-            color: white;
-            font-weight: 500;
+            background-color: #ebf4ff;
+            color: #3b82f6;
         }
-
-        .sidebar .nav-link i {
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
+        
+        .sidebar .nav-link:hover:not(.active) {
+            background-color: #f3f4f6;
         }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            background-color: #f5f7fa;
-        }
-
+        
         .card {
             border: none;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            transition: var(--transition);
-            margin-bottom: 20px;
-            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
         }
-
+        
         .card:hover {
+            transform: translateY(-3px);
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
         }
-
+        
         .card-header {
-            background-color: white;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            font-weight: 600;
-            padding: 15px 20px;
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        .stat-card {
-            border-left: 4px solid;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            background-color: white;
-        }
-
-        .stat-card.border-primary {
-            border-left-color: var(--accent-color);
-        }
-
-        .stat-card.border-success {
-            border-left-color: var(--success-color);
-        }
-
-        .stat-card.border-warning {
-            border-left-color: var(--warning-color);
-        }
-
-        .stat-card.border-info {
-            border-left-color: #3498db;
-        }
-
-        .badge {
-            font-weight: 500;
-            padding: 5px 10px;
-            border-radius: 20px;
-        }
-
-        .btn {
-            border-radius: var(--border-radius);
-            padding: 8px 15px;
-            font-weight: 500;
-            transition: var(--transition);
-        }
-
-        .btn-primary {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
-        .btn-primary:hover {
-            background-color: #2980b9;
-            border-color: #2980b9;
-        }
-
-        .table {
-            border-radius: var(--border-radius);
-            overflow: hidden;
-        }
-
-        .table th {
-            background-color: #f8f9fa;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
             font-weight: 600;
         }
-
-        .timer-badge {
-            background-color: var(--warning-color);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .requisite-item {
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            border-radius: var(--border-radius);
-            padding: 15px;
-            transition: var(--transition);
-        }
-
-        .requisite-item:hover {
-            border-color: var(--accent-color);
-            box-shadow: var(--box-shadow);
-        }
-
-        .modal-content {
-            border-radius: var(--border-radius);
-            border: none;
-        }
-
-        .form-control, .form-select {
-            border-radius: var(--border-radius);
-            padding: 8px 15px;
-        }
-
+        
         .page-section {
             display: none;
             animation: fadeIn 0.3s ease-in-out;
         }
-
+        
         .page-section.active {
             display: block;
         }
-
+        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
+        
+        .badge-status {
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            border-radius: 50rem;
+        }
+        
+        .filter-card {
+            background-color: #f8fafc;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .detail-card {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .detail-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+            border-bottom: 2px solid #3b82f6;
+        }
 
-        .user-dropdown {
+        .action-buttons .btn {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .receipt-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-card {
+            border-left: 3px solid;
+        }
+        
+        .stat-card.border-primary {
+            border-left-color: #3b82f6;
+        }
+        
+        .stat-card.border-success {
+            border-left-color: #10b981;
+        }
+        
+        .stat-card.border-info {
+            border-left-color: #06b6d4;
+        }
+        
+        .stat-card.border-warning {
+            border-left-color: #f59e0b;
+        }
+
+        /* Стили для консоли логов */
+        #log-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            border-top: 1px solid #444;
+        }
+
+        #log-console .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        #log-console .log-time {
+            color: #6a9955;
+        }
+
+        #log-console .log-method {
+            color: #569cd6;
+        }
+
+        #log-console .log-url {
+            color: #9cdcfe;
+        }
+
+        #log-console .log-status {
+            color: #b5cea8;
+        }
+
+        #log-console .log-error {
+            color: #f48771;
+        }
+
+        #log-console .log-success {
+            color: #4ec9b0;
+        }
+
+        #log-console .log-info {
+            color: #c586c0;
+        }
+
+        #log-toggle {
+            position: fixed;
+            bottom: 210px;
+            right: 20px;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #1e1e1e;
             color: white;
-            text-decoration: none;
-        }
-
-        .user-dropdown:hover {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .dropdown-menu {
-            border-radius: var(--border-radius);
             border: none;
-            box-shadow: var(--box-shadow);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Таймер для заявок */
+        .timer-badge {
+            background-color: #f59e0b;
+            color: white;
+            padding: 0.25em 0.5em;
+            border-radius: 50rem;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        /* Стили для реквизитов */
+        .requisite-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .requisite-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Стили для инструкций */
+        .instruction-card {
+            background-color: #f8fafc;
+            border-left: 3px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        /* Стили для диспутов */
+        .dispute-card {
+            border-left: 3px solid #ef4444;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background-color: #fef2f2;
         }
     </style>
 </head>
 <body class="d-flex">
     <!-- Sidebar -->
-    <div class="d-flex flex-column flex-shrink-0 p-3 sidebar">
+    <div class="d-flex flex-column flex-shrink-0 p-3 sidebar" style="width: 280px;">
         <div class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
-            <span class="fs-4 fw-bold text-white">
+            <span class="fs-4 fw-bold text-primary">
                 <i class="fas fa-chart-line me-2"></i>Трейдер
             </span>
         </div>
-        <hr class="border-light">
+        <hr>
         <ul class="nav nav-pills flex-column mb-auto">
             <li class="nav-item">
                 <a href="#" class="nav-link active" data-section="dashboard">
-                    <i class="fas fa-tachometer-alt"></i> Дашборд
+                    <i class="fas fa-tachometer-alt me-2"></i> Дашборд
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" data-section="transactions">
-                    <i class="fas fa-exchange-alt"></i> Транзакции
+                    <i class="fas fa-exchange-alt me-2"></i> Транзакции
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" data-section="requisites">
-                    <i class="fas fa-credit-card"></i> Реквизиты
+                    <i class="fas fa-credit-card me-2"></i> Реквизиты
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" data-section="instructions">
-                    <i class="fas fa-book"></i> Инструкции
+                    <i class="fas fa-book me-2"></i> Инструкции
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" data-section="disputes">
-                    <i class="fas fa-exclamation-triangle"></i> Диспуты
+                    <i class="fas fa-exclamation-triangle me-2"></i> Диспуты
                 </a>
             </li>
             <li>
                 <a href="/" class="nav-link">
-                    <i class="fas fa-home"></i> На главную
+                    <i class="fas fa-home me-2"></i> На главную
                 </a>
             </li>
         </ul>
-        <hr class="border-light">
+        <hr>
         <div class="dropdown">
-            <a href="#" class="d-flex align-items-center user-dropdown dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-user-circle me-2"></i>
                 <strong>{{ user.email }}</strong>
             </a>
@@ -262,7 +331,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="flex-grow-1 p-4" style="background-color: #f5f7fa;">
         <!-- Dashboard Section -->
         <div id="dashboard-section" class="page-section active">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -271,7 +340,7 @@
                     <button class="btn btn-success me-2" id="enableDepositsBtn">
                         <i class="fas fa-toggle-on me-2"></i> Вкл. депозиты
                     </button>
-                    <button class="btn btn-outline-danger me-2" id="disableDepositsBtn">
+                    <button class="btn btn-danger me-2" id="disableDepositsBtn">
                         <i class="fas fa-toggle-off me-2"></i> Выкл. депозиты
                     </button>
                     <button class="btn btn-primary" id="enableWithdrawalsBtn">
@@ -281,56 +350,76 @@
             </div>
             
             <div class="row mb-4">
+                <!-- Рабочий баланс USDT -->
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="stat-card border-primary h-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-2">Рабочий баланс (USDT)</h6>
-                                <h4 class="mb-0" id="working-balance-usdt">{{ "%.2f"|format(user.working_balance_usdt) }} USDT</h4>
+                    <div class="card stat-card border-primary h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Рабочий баланс (USDT)</h6>
+                                    <h4 class="mb-0" id="working-balance-usdt">{{ "%.2f"|format(user.working_balance_usdt) }} USDT</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-coins fa-2x text-primary"></i>
+                                </div>
                             </div>
-                            <i class="fas fa-coins fa-2x text-primary"></i>
                         </div>
                     </div>
                 </div>
                 
+                <!-- Рабочий баланс RUB -->
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="stat-card border-success h-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-2">Рабочий баланс (RUB)</h6>
-                                <h4 class="mb-0" id="working-balance-rub">{{ "%.2f"|format(user.working_balance_rub) }} ₽</h4>
+                    <div class="card stat-card border-success h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Рабочий баланс (RUB)</h6>
+                                    <h4 class="mb-0" id="working-balance-rub">{{ "%.2f"|format(user.working_balance_rub) }} ₽</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-ruble-sign fa-2x text-success"></i>
+                                </div>
                             </div>
-                            <i class="fas fa-ruble-sign fa-2x text-success"></i>
                         </div>
                     </div>
                 </div>
                 
+                <!-- Страховой баланс -->
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="stat-card border-warning h-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-2">Страховой баланс</h6>
-                                <h4 class="mb-0" id="insurance-balance">{{ "%.2f"|format(user.insurance_balance) }} USDT</h4>
+                    <div class="card stat-card border-warning h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Страховой баланс</h6>
+                                    <h4 class="mb-0" id="insurance-balance">{{ "%.2f"|format(user.insurance_balance) }} USDT</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-shield-alt fa-2x text-warning"></i>
+                                </div>
                             </div>
-                            <i class="fas fa-shield-alt fa-2x text-warning"></i>
                         </div>
                     </div>
                 </div>
                 
+                <!-- Процентные ставки -->
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="stat-card border-info h-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-2">Процентные ставки</h6>
-                                <h4 class="mb-0">
-                                    <span id="deposit-rate">{{ "%.2f"|format(user.deposit_rate * 100) }}%</span> / 
-                                    <span id="withdrawal-rate">{{ "%.2f"|format(user.withdrawal_rate * 100) }}%</span>
-                                </h4>
-                                <small>Депозит / Вывод</small>
+                    <div class="card stat-card border-info h-100">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="text-uppercase text-muted mb-2">Процентные ставки</h6>
+                                    <h4 class="mb-0">
+                                        <span id="deposit-rate">{{ "%.2f"|format(user.deposit_rate * 100) }}%</span> / 
+                                        <span id="withdrawal-rate">{{ "%.2f"|format(user.withdrawal_rate * 100) }}%</span>
+                                    </h4>
+                                    <small>Депозит / Вывод</small>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-info" id="editRatesBtn">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-info" id="editRatesBtn">
-                                <i class="fas fa-cog"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -381,7 +470,7 @@
                                                 </span>
                                                 {% endif %}
                                             </td>
-                                            <td>
+                                            <td class="action-buttons">
                                                 <button class="btn btn-sm btn-outline-primary view-transaction-btn" data-transaction-id="{{ transaction.id }}">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
@@ -405,7 +494,7 @@
                         <div class="card-header">
                             <h6 class="m-0 font-weight-bold">Быстрые действия</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body quick-actions">
                             <button class="btn btn-primary w-100 mb-3" id="addRequisitesBtn">
                                 <i class="fas fa-plus-circle me-2"></i> Добавить реквизиты
                             </button>
@@ -522,11 +611,11 @@
                 </div>
             </div>
             
-            <div class="card mb-4">
+            <div class="card filter-card mb-4">
                 <div class="card-body">
                     <form id="transactionsFilterForm">
                         <div class="row">
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-3">
                                 <label class="form-label">Тип</label>
                                 <select class="form-select" name="type">
                                     <option value="all">Все</option>
@@ -534,7 +623,7 @@
                                     <option value="withdrawal">Выплата</option>
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-3">
                                 <label class="form-label">Статус</label>
                                 <select class="form-select" name="status">
                                     <option value="all">Все</option>
@@ -543,25 +632,25 @@
                                     <option value="failed">Ошибка</option>
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-3">
                                 <label class="form-label">Дата с</label>
                                 <input type="date" class="form-control" name="date_from">
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-3">
                                 <label class="form-label">Дата по</label>
                                 <input type="date" class="form-control" name="date_to">
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
+                        <div class="row mt-3">
+                            <div class="col-md-4">
                                 <label class="form-label">Сумма от</label>
                                 <input type="number" class="form-control" name="amount_from" placeholder="Минимальная сумма">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4">
                                 <label class="form-label">Сумма до</label>
                                 <input type="number" class="form-control" name="amount_to" placeholder="Максимальная сумма">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4">
                                 <label class="form-label">Метод</label>
                                 <select class="form-select" name="method">
                                     <option value="all">Все</option>
@@ -571,7 +660,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row mt-3">
                             <div class="col text-end">
                                 <button type="reset" class="btn btn-outline-secondary me-2">Сбросить</button>
                                 <button type="submit" class="btn btn-primary">Применить</button>
@@ -616,7 +705,7 @@
                                         </span>
                                     </td>
                                     <td>{{ transaction.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</td>
-                                    <td>
+                                    <td class="action-buttons">
                                         <button class="btn btn-sm btn-outline-primary view-transaction-btn" data-transaction-id="{{ transaction.id }}">
                                             <i class="fas fa-eye"></i>
                                         </button>
@@ -699,40 +788,32 @@
                     <h6 class="m-0 font-weight-bold">Регламент работы</h6>
                 </div>
                 <div class="card-body">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5><i class="fas fa-info-circle text-primary me-2"></i>Общие правила</h5>
-                            <p>1. Все транзакции должны быть обработаны в течение 15 минут с момента поступления.</p>
-                            <p>2. При возникновении проблем с обработкой транзакции, немедленно сообщите в поддержку.</p>
-                            <p>3. Запрещено использовать собственные реквизиты для обработки транзакций.</p>
-                        </div>
+                    <div class="instruction-card">
+                        <h5><i class="fas fa-info-circle text-primary me-2"></i>Общие правила</h5>
+                        <p>1. Все транзакции должны быть обработаны в течение 15 минут с момента поступления.</p>
+                        <p>2. При возникновении проблем с обработкой транзакции, немедленно сообщите в поддержку.</p>
+                        <p>3. Запрещено использовать собственные реквизиты для обработки транзакций.</p>
                     </div>
                     
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5><i class="fas fa-coins text-success me-2"></i>Депозиты</h5>
-                            <p>1. Проверьте поступление средств на ваш счет в течение 5 минут после создания заявки.</p>
-                            <p>2. Подтвердите зачисление средств клиенту сразу после проверки.</p>
-                            <p>3. В случае непоступления средств, отмените транзакцию и сообщите клиенту.</p>
-                        </div>
+                    <div class="instruction-card">
+                        <h5><i class="fas fa-coins text-success me-2"></i>Депозиты</h5>
+                        <p>1. Проверьте поступление средств на ваш счет в течение 5 минут после создания заявки.</p>
+                        <p>2. Подтвердите зачисление средств клиенту сразу после проверки.</p>
+                        <p>3. В случае непоступления средств, отмените транзакцию и сообщите клиенту.</p>
                     </div>
                     
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5><i class="fas fa-money-bill-wave text-danger me-2"></i>Выплаты</h5>
-                            <p>1. Проверьте реквизиты клиента перед отправкой средств.</p>
-                            <p>2. Отправляйте точную сумму, указанную в заявке.</p>
-                            <p>3. Обязательно загружайте подтверждение платежа (чек) в систему.</p>
-                        </div>
+                    <div class="instruction-card">
+                        <h5><i class="fas fa-money-bill-wave text-danger me-2"></i>Выплаты</h5>
+                        <p>1. Проверьте реквизиты клиента перед отправкой средств.</p>
+                        <p>2. Отправляйте точную сумму, указанную в заявке.</p>
+                        <p>3. Обязательно загружайте подтверждение платежа (чек) в систему.</p>
                     </div>
                     
-                    <div class="card">
-                        <div class="card-body">
-                            <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Диспуты</h5>
-                            <p>1. При возникновении спора, предоставьте все доказательства в течение 24 часов.</p>
-                            <p>2. Не вступайте в конфликт с клиентами, все вопросы решаются через поддержку.</p>
-                            <p>3. В случае вашей ошибки, средства будут списаны с вашего страхового депозита.</p>
-                        </div>
+                    <div class="instruction-card">
+                        <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Диспуты</h5>
+                        <p>1. При возникновении спора, предоставьте все доказательства в течение 24 часов.</p>
+                        <p>2. Не вступайте в конфликт с клиентами, все вопросы решаются через поддержку.</p>
+                        <p>3. В случае вашей ошибки, средства будут списаны с вашего страхового депозита.</p>
                     </div>
                 </div>
             </div>
@@ -750,27 +831,25 @@
                 </div>
                 <div class="card-body">
                     {% for dispute in disputes %}
-                    <div class="card mb-3 border-danger">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h5>Транзакция #{{ dispute.transaction_id }}</h5>
-                                    <p class="mb-1"><strong>Тип:</strong> {{ 'Депозит' if dispute.type == 'deposit' else 'Выплата' }}</p>
-                                    <p class="mb-1"><strong>Сумма:</strong> {{ "%.2f"|format(dispute.amount) }} {{ dispute.currency }}</p>
-                                    <p class="mb-1"><strong>Причина:</strong> {{ dispute.reason }}</p>
-                                    <p class="mb-1"><strong>Статус:</strong> 
-                                        <span class="badge bg-{{ 'warning' if dispute.status == 'open' else 'success' if dispute.status == 'resolved' else 'danger' }}">
-                                            {{ dispute.status }}
-                                        </span>
-                                    </p>
-                                </div>
-                                <small class="text-muted">{{ dispute.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</small>
+                    <div class="dispute-card mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5>Транзакция #{{ dispute.transaction_id }}</h5>
+                                <p class="mb-1"><strong>Тип:</strong> {{ 'Депозит' if dispute.type == 'deposit' else 'Выплата' }}</p>
+                                <p class="mb-1"><strong>Сумма:</strong> {{ "%.2f"|format(dispute.amount) }} {{ dispute.currency }}</p>
+                                <p class="mb-1"><strong>Причина:</strong> {{ dispute.reason }}</p>
+                                <p class="mb-1"><strong>Статус:</strong> 
+                                    <span class="badge bg-{{ 'warning' if dispute.status == 'open' else 'success' if dispute.status == 'resolved' else 'danger' }}">
+                                        {{ dispute.status }}
+                                    </span>
+                                </p>
                             </div>
-                            <div class="mt-3">
-                                <button class="btn btn-sm btn-primary view-dispute-btn" data-dispute-id="{{ dispute.id }}">
-                                    <i class="fas fa-eye me-2"></i> Подробнее
-                                </button>
-                            </div>
+                            <small class="text-muted">{{ dispute.created_at|datetimeformat('%d.%m.%Y %H:%M') }}</small>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-primary view-dispute-btn" data-dispute-id="{{ dispute.id }}">
+                                <i class="fas fa-eye me-2"></i> Подробнее
+                            </button>
                         </div>
                     </div>
                     {% else %}
@@ -962,7 +1041,7 @@
                     <div id="receiptPreviewContainer" style="display: none;">
                         <h6 class="mb-3">Загруженный чек</h6>
                         <a href="#" id="receiptLink" target="_blank">
-                            <img id="receiptPreview" class="img-thumbnail" src="" alt="Превью чека" style="max-width: 200px;">
+                            <img id="receiptPreview" class="receipt-preview" src="" alt="Превью чека">
                         </a>
                     </div>
                 </div>
@@ -1165,6 +1244,12 @@
             </div>
         </div>
     </div>
+
+    <!-- Консоль для логов -->
+    <button id="log-toggle" title="Показать/скрыть логи">
+        <i class="fas fa-terminal"></i>
+    </button>
+    <div id="log-console"></div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1807,6 +1892,140 @@
                 Swal.fire('Ошибка!', error.message, 'error');
             }
         }
+
+        // Логирование всех запросов
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const startTime = new Date();
+            let method = 'GET';
+            let url = args[0];
+            
+            if (args[1]) {
+                method = args[1].method || 'GET';
+                url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            }
+            
+            logRequest(method, url, args[1] ? args[1].body : null);
+            
+            try {
+                const response = await originalFetch.apply(this, args);
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                
+                const clonedResponse = response.clone();
+                let responseData = null;
+                
+                try {
+                    responseData = await clonedResponse.json();
+                } catch (e) {
+                    try {
+                        responseData = await clonedResponse.text();
+                    } catch (e) {
+                        responseData = '[Не удалось прочитать ответ]';
+                    }
+                }
+                
+                logResponse(method, url, response.status, duration, responseData);
+                return response;
+            } catch (error) {
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                logError(method, url, error, duration);
+                throw error;
+            }
+        };
+
+        // Функции логирования
+        function logRequest(method, url, body) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let bodyInfo = '';
+            if (body) {
+                try {
+                    const parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
+                    bodyInfo = `<span class="log-info">Body: ${JSON.stringify(parsedBody, null, 2)}</span>`;
+                } catch (e) {
+                    bodyInfo = `<span class="log-info">Body: ${body}</span>`;
+                }
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                ${bodyInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logResponse(method, url, status, duration, data) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let dataInfo = '';
+            if (data) {
+                dataInfo = `<span class="log-info">Response: ${JSON.stringify(data, null, 2)}</span>`;
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-status">${status}</span>
+                <span class="log-success">(${duration}ms)</span>
+                ${dataInfo}
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function logError(method, url, error, duration) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let errorDetails = '';
+            if (error instanceof Error) {
+                errorDetails = `${error.message}<br>Stack: ${error.stack}`;
+            } else if (typeof error === 'object') {
+                errorDetails = JSON.stringify(error, null, 2);
+            } else {
+                errorDetails = String(error);
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-method">${method}</span>
+                <span class="log-url">${url}</span>
+                <span class="log-error">ERROR: ${error.message}</span>
+                <span class="log-error">(${duration}ms)</span>
+                <div class="log-error-details">${errorDetails}</div>
+            `;
+            
+            document.getElementById('log-console').appendChild(logEntry);
+            scrollLogsToBottom();
+        }
+
+        function scrollLogsToBottom() {
+            const console = document.getElementById('log-console');
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Переключение консоли логов
+        document.getElementById('log-toggle').addEventListener('click', function() {
+            const console = document.getElementById('log-console');
+            if (console.style.display === 'block') {
+                console.style.display = 'none';
+            } else {
+                console.style.display = 'block';
+            }
+        });
     </script>
 </body>
 </html>
