@@ -801,7 +801,6 @@ Body:
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="transactionForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -921,7 +920,6 @@ Body:
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="requisitesForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" id="requisitesTxId" name="tx_id">
                     <div class="modal-body">
                         <div class="mb-3">
@@ -1324,8 +1322,7 @@ Body:
                 fetch('/api/merchant/transactions', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token() }}'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestData)
                 })
@@ -1366,10 +1363,7 @@ Body:
                             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             
                             fetch(`/api/merchant/transactions/${txId}/cancel`, {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-Token': '{{ csrf_token() }}'
-                                }
+                                method: 'POST'
                             })
                             .then(response => response.json())
                             .then(data => {
@@ -1529,13 +1523,11 @@ Body:
                 logInfo('Реквизиты', `Отправка реквизитов для транзакции ID: ${txId}`);
 
                 delete requestData.tx_id;
-                delete requestData.csrf_token;
                 
                 fetch(`/api/merchant/transactions/${txId}/requisites`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token() }}'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestData)
                 })
@@ -1569,10 +1561,7 @@ Body:
                 logInfo('API', 'Запрос на генерацию нового API ключа');
                 
                 fetch('/api/merchant/api_keys', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-Token': '{{ csrf_token() }}'
-                    }
+                    method: 'POST'
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -1613,10 +1602,7 @@ Body:
                             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             
                             fetch(`/api/merchant/api_keys/${keyId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-Token': '{{ csrf_token() }}'
-                                }
+                                method: 'DELETE'
                             })
                             .then(response => response.json())
                             .then(data => {
