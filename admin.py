@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
-from flask import jsonify, render_template, request, redirect, url_for, session, send_from_directory
+from flask import jsonify, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash
-import uuid
-import os
 import logging
 from functools import wraps
 
@@ -43,14 +41,11 @@ def admin_routes(app, db, logger):
             if not current_admin:
                 return redirect(url_for('login'))
 
-            # Получаем всех пользователей
             users = db.find('users') or []
             users_dict = {u['id']: u for u in users}
 
-            # Получаем все транзакции
             transactions = db.find('transactions') or []
             
-            # Формируем список транзакций для отображения
             all_transactions = []
             for tx in sorted(transactions, key=lambda x: x.get('created_at', ''), reverse=True):
                 user_id = tx.get('user_id') or tx.get('merchant_id')
@@ -68,7 +63,6 @@ def admin_routes(app, db, logger):
                     'completed_at': tx.get('completed_at')
                 })
 
-            # Статистика
             today = datetime.now().date()
             today_transactions = [
                 tx for tx in all_transactions 
@@ -264,7 +258,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/deposits/<int:deposit_id>/complete', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def api_complete_deposit(deposit_id):
         try:
             deposit = db.find_one('transactions', {'id': deposit_id, 'type': 'deposit'})
@@ -288,7 +281,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/withdrawals/<int:withdrawal_id>/complete', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def api_complete_withdrawal(withdrawal_id):
         try:
             withdrawal = db.find_one('transactions', {
@@ -314,7 +306,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/withdrawals/<int:withdrawal_id>/reject', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def api_reject_withdrawal(withdrawal_id):
         try:
             withdrawal = db.find_one('transactions', {
@@ -340,7 +331,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/currency_rates', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def update_currency_rates():
         try:
             data = request.get_json()
@@ -369,7 +359,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/commissions', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def update_commissions():
         try:
             data = request.get_json()
@@ -410,7 +399,6 @@ def admin_routes(app, db, logger):
             
             matched_pairs = []
             
-            # Простой алгоритм матчинга
             for deposit in pending_deposits:
                 for withdrawal in pending_withdrawals:
                     if float(deposit.get('amount', 0)) == float(withdrawal.get('amount', 0)):
@@ -424,8 +412,6 @@ def admin_routes(app, db, logger):
                         }
                         
                         db.insert_one('matches', match)
-                        
-                        # Обновляем статусы транзакций
                         db.update_one('transactions', {'id': deposit['id']}, {'status': 'matched'})
                         db.update_one('transactions', {'id': withdrawal['id']}, {'status': 'matched'})
                         
@@ -440,7 +426,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/matches/<match_id>/confirm', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def confirm_match(match_id):
         try:
             match = db.find_one('matches', {'id': match_id})
@@ -449,7 +434,6 @@ def admin_routes(app, db, logger):
             
             db.update_one('matches', {'id': match_id}, {'status': 'completed'})
             
-            # Обновляем статусы транзакций
             db.update_one('transactions', {'id': match['deposit_id']}, {
                 'status': 'completed',
                 'completed_at': datetime.now().isoformat()
@@ -474,7 +458,6 @@ def admin_routes(app, db, logger):
 
     @app.route('/api/admin/settings', methods=['POST'])
     @app.role_required('admin')
-    @app.csrf_protect
     def update_settings():
         try:
             data = request.get_json()
